@@ -26,12 +26,13 @@ void main() async {
     );
     firebaseAvailable = true;
     debugPrint('✅ Firebase initialized successfully.');
-    // First-ever launch: default to Mock Mode so test credentials work.
-    // Users can toggle to Live when Firebase users are configured.
-    if (!sharedPreferences.containsKey('use_mock_mode_v1')) {
-      await sharedPreferences.setBool('use_mock_mode_v1', true);
-      debugPrint('   → No mode preference found. Defaulting to Mock Mode.');
-    }
+    // ── FORCE MOCK MODE ────────────────────────────────────────────────────
+    // Real Firebase accounts for test users have not been created yet.
+    // We always boot into Mock Mode so demo credentials work out of the box.
+    // To use Firebase (Live mode), the user can toggle the switch after login.
+    // Remove this line once real Firebase accounts are provisioned.
+    await sharedPreferences.setBool('use_mock_mode_v1', true);
+    debugPrint('   → Defaulting to Mock Mode (no Firebase accounts configured).');
   } on UnsupportedError catch (e) {
     debugPrint('⚠️  Firebase not supported on this platform: $e');
     debugPrint('   → Switching to Mock Mode automatically.');
