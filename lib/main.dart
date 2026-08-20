@@ -26,10 +26,15 @@ void main() async {
     );
     firebaseAvailable = true;
     debugPrint('✅ Firebase initialized successfully.');
+    // First-ever launch: default to Mock Mode so test credentials work.
+    // Users can toggle to Live when Firebase users are configured.
+    if (!sharedPreferences.containsKey('use_mock_mode_v1')) {
+      await sharedPreferences.setBool('use_mock_mode_v1', true);
+      debugPrint('   → No mode preference found. Defaulting to Mock Mode.');
+    }
   } on UnsupportedError catch (e) {
     debugPrint('⚠️  Firebase not supported on this platform: $e');
     debugPrint('   → Switching to Mock Mode automatically.');
-    // Save mock mode preference so providers read it correctly
     await sharedPreferences.setBool('use_mock_mode_v1', true);
   } catch (e) {
     debugPrint('⚠️  Firebase init failed: $e');

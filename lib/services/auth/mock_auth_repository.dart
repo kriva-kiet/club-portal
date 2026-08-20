@@ -6,13 +6,13 @@ class MockAuthRepository implements AuthRepository {
   final _controller = StreamController<UserModel?>.broadcast();
   UserModel? _currentUser;
 
-  // Initial Seed Users
+  // ── Seed Users ─────────────────────────────────────────────────────────────
   static final Map<String, UserModel> _mockUsers = {
     'MEM001': UserModel(
       uid: 'user_mem001',
       clubId: 'MEM001',
       name: 'Abhisht Singh',
-      email: 'mem001@kriva.app',
+      email: 'member@kriva.app',
       photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=Abhisht',
       role: UserRole.member,
       batch: 'Batch of 2026',
@@ -28,12 +28,11 @@ class MockAuthRepository implements AuthRepository {
       uid: 'user_led001',
       clubId: 'LED001',
       name: 'Elena Rostova',
-      email: 'led001@kriva.app',
+      email: 'lead@kriva.app',
       photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=Elena',
       role: UserRole.lead,
       batch: 'Batch of 2025',
-      bio:
-          'Domain Lead for Data Structures & Algorithms. Ask me anything about graphs!',
+      bio: 'Domain Lead for Data Structures & Algorithms. Ask me anything about graphs!',
       domainsFollowing: ['dsa'],
       streak: UserStreak(count: 24, lastActiveDate: DateTime.now()),
       createdAt: DateTime.now().subtract(const Duration(days: 60)),
@@ -42,7 +41,7 @@ class MockAuthRepository implements AuthRepository {
       uid: 'user_adm001',
       clubId: 'ADM001',
       name: 'Club President',
-      email: 'adm001@kriva.app',
+      email: 'admin@kriva.app',
       photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=President',
       role: UserRole.admin,
       batch: 'Batch of 2024',
@@ -54,24 +53,39 @@ class MockAuthRepository implements AuthRepository {
     'DEV001': UserModel(
       uid: 'user_dev001',
       clubId: 'DEV001',
-      name: 'Master Developer',
-      email: 'dev001@kriva.app',
+      name: 'Abhisht Singh (Dev)',
+      email: 'dev@kriva.app',
       photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=Developer',
       role: UserRole.developer,
       batch: 'Batch of 2026',
-      bio: 'Absolute System Developer override. Master privileges enabled.',
+      bio: 'App Developer. Master privileges enabled.',
       domainsFollowing: ['dsa', 'web_dev', 'ml'],
       streak: UserStreak(count: 99, lastActiveDate: DateTime.now()),
       createdAt: DateTime.now().subtract(const Duration(days: 120)),
     ),
   };
 
-  // Initial Mock Passwords store (Email/ID -> Password)
+  // ── Passwords (keyed by UPPERCASE club ID) ─────────────────────────────────
   static final Map<String, String> _mockPasswords = {
     'MEM001': 'password',
     'LED001': 'password',
     'ADM001': 'password',
     'DEV001': 'password',
+  };
+
+  // ── Email → Club ID lookup ─────────────────────────────────────────────────
+  // Supports both shorthand (member@kriva.app) and full-format (mem001@kriva.app)
+  static final Map<String, String> _emailToClubId = {
+    // Shorthand emails
+    'member@kriva.app': 'MEM001',
+    'lead@kriva.app':   'LED001',
+    'admin@kriva.app':  'ADM001',
+    'dev@kriva.app':    'DEV001',
+    // Full-format emails
+    'mem001@kriva.app': 'MEM001',
+    'led001@kriva.app': 'LED001',
+    'adm001@kriva.app': 'ADM001',
+    'dev001@kriva.app': 'DEV001',
   };
 
   // Public getters to allow MockDatabaseRepository to add users on approval
@@ -89,33 +103,52 @@ class MockAuthRepository implements AuthRepository {
   @override
   UserModel? get currentUser => _currentUser;
 
+  /// Resolves a login input (Club ID or email) to a club ID key.
+  String _resolveToClubId(String input) {
+    final trimmed = input.trim();
+
+    // 1. Email format — look up in email map
+    if (trimmed.contains('@')) {
+      final lowerEmail = trimmed.toLowerCase();
+      final fromMap = _emailToClubId[lowerEmail];
+      if (fromMap != null) return fromMap;
+
+      // 2. Try extracting prefix from email (e.g. "MEM001@..." → "MEM001")
+      final prefix = lowerEmail.split('@')[0].toUpperCase();
+      if (_mockUsers.containsKey(prefix)) return prefix;
+    }
+
+    // 3. Direct Club ID (case-insensitive)
+    final upperId = trimmed.toUpperCase();
+    if (_mockUsers.containsKey(upperId)) return upperId;
+
+    // 4. Not found — return as-is so the error is descriptive
+    return upperId;
+  }
+
   @override
   Future<UserModel> signIn(String loginId, String password) async {
-    await Future.delayed(const Duration(milliseconds: 800)); // Simulate network
+    await Future.delayed(const Duration(milliseconds: 700)); // Simulate network
 
-    // Format loginId if it's email or ID
-    final String cleanId = loginId.toUpperCase().trim();
-    String lookupId = cleanId;
-    if (cleanId.contains('@')) {
-      // Extract club ID from emails like mem001@kriva.app
-      lookupId = cleanId.split('@')[0].toUpperCase();
-    }
+    final clubId = _resolveToClubId(loginId);
 
-    if (_mockUsers.containsKey(lookupId)) {
-      final actualPassword = _mockPasswords[lookupId] ?? 'password';
-      if (actualPassword != password) {
-        throw Exception('Incorrect password for account $loginId');
-      }
-
-      final user = _mockUsers[lookupId]!;
-      _currentUser = user;
-      _controller.add(_currentUser);
-      return _currentUser!;
-    } else {
+    if (!_mockUsers.containsKey(clubId)) {
       throw Exception(
-        'Account ID "$loginId" is not admitted in the system. Please submit an Access Request.',
+        'Account "$loginId" is not admitted in the system.\n'
+        'Use your Club ID (e.g. MEM001) or email (e.g. member@kriva.app), '
+        'or submit an Access Request.',
       );
     }
+
+    final actualPassword = _mockPasswords[clubId] ?? 'password';
+    if (actualPassword != password) {
+      throw Exception('Incorrect password for account $loginId.');
+    }
+
+    final user = _mockUsers[clubId]!;
+    _currentUser = user;
+    _controller.add(_currentUser);
+    return _currentUser!;
   }
 
   @override
@@ -169,7 +202,7 @@ class MockAuthRepository implements AuthRepository {
       photoUrl: photoUrl.isNotEmpty ? photoUrl : _currentUser!.photoUrl,
     );
 
-    // Update the seed map as well so logging back in retains changes in this run
+    // Update the seed map so logging back in retains changes in this session
     if (_mockUsers.containsKey(_currentUser!.clubId)) {
       _mockUsers[_currentUser!.clubId] = _currentUser!;
     }

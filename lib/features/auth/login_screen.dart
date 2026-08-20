@@ -35,12 +35,12 @@ const _portals = {
   _PortalType.member: _PortalConfig(
     label: 'Member',
     subtitle: 'Student Portal',
-    hint: 'e.g. MEM001 or name@kriva.app',
+    hint: 'e.g. MEM001 or member@kriva.app',
     icon: Icons.person_rounded,
     accent: Color(0xFF6366F1),
     cardGradientStart: Color(0xFF1E1B4B),
     cardGradientEnd: Color(0xFF312E81),
-    mockHint: '💡 Demo: ID = MEM001  |  Password = password',
+    mockHint: '💡 member@kriva.app  or  MEM001\nPassword: password',
   ),
   _PortalType.lead: _PortalConfig(
     label: 'Lead / Mentor',
@@ -50,17 +50,17 @@ const _portals = {
     accent: Color(0xFF10B981),
     cardGradientStart: Color(0xFF064E3B),
     cardGradientEnd: Color(0xFF065F46),
-    mockHint: '💡 Demo: ID = LED001  |  Password = password',
+    mockHint: '💡 lead@kriva.app  or  LED001\nPassword: password',
   ),
   _PortalType.admin: _PortalConfig(
     label: 'Admin / Dev',
     subtitle: 'Admin Control Center',
-    hint: 'e.g. ADM001 or DEV001',
+    hint: 'e.g. ADM001, DEV001 or admin@kriva.app',
     icon: Icons.admin_panel_settings_rounded,
     accent: Color(0xFFEF4444),
     cardGradientStart: Color(0xFF450A0A),
     cardGradientEnd: Color(0xFF7F1D1D),
-    mockHint: '💡 Demo: ADM001 or DEV001  |  Password = password',
+    mockHint: '💡 admin@kriva.app / ADM001  (Admin)\n   dev@kriva.app / DEV001  (Developer)\nPassword: password',
   ),
 };
 
