@@ -127,6 +127,19 @@ class _MembersTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(_membersStreamProvider);
+    final currentUser = ref.watch(currentUserProvider);
+    final domains = ref.watch(domainsProvider).valueOrNull ?? [];
+    final ledDomain = domains.firstWhere(
+      (d) => d.leadUserId == currentUser?.uid,
+      orElse: () => DomainModel(
+        id: '',
+        name: '',
+        description: '',
+        leadUserId: '',
+        password: '',
+        modules: [],
+      ),
+    );
 
     return membersAsync.when(
       data: (members) {
@@ -142,7 +155,13 @@ class _MembersTab extends ConsumerWidget {
               margin: const EdgeInsets.only(bottom: 10),
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
-                onTap: () => _showRoleSheet(context, ref, m),
+                onTap: () {
+                  if (currentUser?.role == UserRole.lead) {
+                    _showStudentProgressSheet(context, ref, m, ledDomain);
+                  } else {
+                    _showRoleSheet(context, ref, m);
+                  }
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -376,6 +395,217 @@ class _MembersTab extends ConsumerWidget {
     );
   }
 
+  void _showStudentProgressSheet(
+    BuildContext context,
+    WidgetRef ref,
+    UserModel student,
+    DomainModel domain,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final progressAsync = ref.watch(
+              studentProgressProvider((uid: student.uid, domainId: domain.id)),
+            );
+            final modulesAsync = ref.watch(modulesProvider(domain.id));
+
+            return Container(
+              padding: const EdgeInsets.all(24),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: student.photoUrl.isNotEmpty
+                            ? NetworkImage(student.photoUrl)
+                            : null,
+                        radius: 24,
+                        child: student.photoUrl.isEmpty
+                            ? const Icon(Icons.person, size: 24)
+                            : null,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              student.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            Text(
+                              '${student.clubId} · ${student.batch}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  Text(
+                    'Domain Progress: ${domain.name}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  progressAsync.when(
+                    data: (progress) {
+                      final percent = progress?.percentComplete ?? 0.0;
+                      return Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: percent,
+                              minHeight: 12,
+                              backgroundColor: AppColors.surfaceLight,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                AppColors.secondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${(percent * 100).toInt()}% Complete',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                '${progress?.topicsCompleted.length ?? 0} Checkpoints Mastered',
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    error: (e, s) => Text('Error loading progress: $e'),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Checkpoint & Module Details',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: modulesAsync.when(
+                      data: (modules) {
+                        if (modules.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No modules configured.',
+                              style: TextStyle(color: AppColors.textMuted),
+                            ),
+                          );
+                        }
+                        return ListView.builder(
+                          itemCount: modules.length,
+                          itemBuilder: (context, mIdx) {
+                            final m = modules[mIdx];
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8.0,
+                                  ),
+                                  child: Text(
+                                    m.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                                ...m.topics.map((t) {
+                                  final isCompleted = progressAsync.valueOrNull
+                                          ?.topicsCompleted
+                                          .containsKey(t.id) ??
+                                      false;
+                                  return ListTile(
+                                    dense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: Icon(
+                                      isCompleted
+                                          ? Icons.check_circle_rounded
+                                          : Icons.radio_button_unchecked_rounded,
+                                      color: isCompleted
+                                          ? AppColors.success
+                                          : AppColors.textMuted,
+                                      size: 18,
+                                    ),
+                                    title: Text(
+                                      t.title,
+                                      style: TextStyle(
+                                        color: isCompleted
+                                            ? AppColors.textPrimary
+                                            : AppColors.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  );
+                                }),
+                                const Divider(),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                      error: (e, s) => Text('Error: $e'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Color _roleColor(UserRole role) {
     return switch (role) {
       UserRole.admin => AppColors.error,
@@ -387,7 +617,32 @@ class _MembersTab extends ConsumerWidget {
 }
 
 final _membersStreamProvider = StreamProvider<List<UserModel>>((ref) {
-  return ref.watch(databaseRepositoryProvider).getMembers();
+  final db = ref.watch(databaseRepositoryProvider);
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const Stream.empty();
+
+  if (user.role == UserRole.lead) {
+    final domainsAsync = ref.watch(domainsProvider);
+    return domainsAsync.when(
+      data: (domains) {
+        final ledDomainIds = domains
+            .where((d) => d.leadUserId == user.uid)
+            .map((d) => d.id)
+            .toList();
+
+        return db.getMembers().map((membersList) {
+          return membersList.where((m) {
+            return m.role == UserRole.member &&
+                m.domainsFollowing.any((dId) => ledDomainIds.contains(dId));
+          }).toList();
+        });
+      },
+      loading: () => const Stream.empty(),
+      error: (e, s) => const Stream.empty(),
+    );
+  }
+
+  return db.getMembers();
 });
 
 // ── Broadcast Tab ──────────────────────────────────────────────────────────────
@@ -1598,6 +1853,7 @@ class _AnalyticsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(_membersStreamProvider);
     final domainsAsync = ref.watch(domainsProvider);
+    final user = ref.watch(currentUserProvider);
 
     return membersAsync.when(
       data: (members) {
@@ -1767,7 +2023,7 @@ class _AnalyticsTab extends ConsumerWidget {
                     domainsAsync.when(
                       data: (allDomains) {
                         final domains = user?.role == UserRole.lead
-                            ? allDomains.where((d) => d.leadUserId == user.uid).toList()
+                            ? allDomains.where((d) => d.leadUserId == user?.uid).toList()
                             : allDomains;
                         // Aggregate enrolments
                         final domainCounts = <String, int>{};

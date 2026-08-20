@@ -138,6 +138,12 @@ final userProgressProvider = StreamProvider.family<UserProgressModel?, String>((
   return dbRepo.getUserProgress(user.uid, domainId);
 });
 
+// Stream of progress for a specific student and domain (used by Leads)
+final studentProgressProvider = StreamProvider.family<UserProgressModel?, ({String uid, String domainId})>((ref, args) {
+  final dbRepo = ref.watch(databaseRepositoryProvider);
+  return dbRepo.getUserProgress(args.uid, args.domainId);
+});
+
 // Streams of Broadcasts filtered for current user
 final broadcastsProvider = StreamProvider<List<BroadcastModel>>((ref) {
   final user = ref.watch(currentUserProvider);
