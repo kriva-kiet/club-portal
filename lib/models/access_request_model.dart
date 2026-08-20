@@ -8,6 +8,8 @@ class AccessRequestModel {
   final String personalEmail;
   final String kietEmail;
   final String aadharNumber;
+  final String requestedRole; // 'member', 'lead'
+  final List<String> domainInterest; // ['dsa', 'web_dev', 'ml']
   final String status; // 'pending', 'approved', 'rejected'
   final DateTime requestedAt;
 
@@ -19,12 +21,15 @@ class AccessRequestModel {
     required this.personalEmail,
     required this.kietEmail,
     required this.aadharNumber,
+    required this.requestedRole,
+    required this.domainInterest,
     required this.status,
     required this.requestedAt,
   });
 
   factory AccessRequestModel.fromMap(Map<String, dynamic> map, String id) {
     final requested = map['requestedAt'];
+    final domains = map['domainInterest'];
     return AccessRequestModel(
       id: id,
       name: map['name'] ?? '',
@@ -33,10 +38,14 @@ class AccessRequestModel {
       personalEmail: map['personalEmail'] ?? '',
       kietEmail: map['kietEmail'] ?? '',
       aadharNumber: map['aadharNumber'] ?? '',
+      requestedRole: map['requestedRole'] ?? 'member',
+      domainInterest: domains is List ? List<String>.from(domains) : [],
       status: map['status'] ?? 'pending',
       requestedAt: requested is Timestamp
           ? requested.toDate()
-          : (requested is String ? (DateTime.tryParse(requested) ?? DateTime.now()) : DateTime.now()),
+          : (requested is String
+                ? (DateTime.tryParse(requested) ?? DateTime.now())
+                : DateTime.now()),
     );
   }
 
@@ -48,6 +57,8 @@ class AccessRequestModel {
       'personalEmail': personalEmail,
       'kietEmail': kietEmail,
       'aadharNumber': aadharNumber,
+      'requestedRole': requestedRole,
+      'domainInterest': domainInterest,
       'status': status,
       'requestedAt': Timestamp.fromDate(requestedAt),
     };
@@ -61,6 +72,8 @@ class AccessRequestModel {
       'personalEmail': personalEmail,
       'kietEmail': kietEmail,
       'aadharNumber': aadharNumber,
+      'requestedRole': requestedRole,
+      'domainInterest': domainInterest,
       'status': status,
       'requestedAt': requestedAt.toIso8601String(),
     };

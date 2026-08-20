@@ -7,6 +7,7 @@ import '../../models/message_model.dart';
 import '../../models/post_model.dart';
 import '../../services/service_providers.dart';
 import '../../widgets/glass_container.dart';
+import '../../core/localization/app_localizations.dart';
 
 class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({super.key});
@@ -41,14 +42,19 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
               child: Row(
                 children: [
-                  const Icon(Icons.people_alt_rounded, color: AppColors.primary, size: 28),
+                  const Icon(
+                    Icons.people_alt_rounded,
+                    color: AppColors.primary,
+                    size: 28,
+                  ),
                   const SizedBox(width: 12),
                   Text(
-                    'Community Hub',
+                    AppLocalizations.of(context)?.translate('community_title') ??
+                        'Community Hub',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 24,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 24,
+                    ),
                   ),
                 ],
               ),
@@ -58,7 +64,10 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
               indicatorColor: AppColors.primary,
               labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.textMuted,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
               tabs: const [
                 Tab(text: 'Feed'),
                 Tab(text: 'Chats'),
@@ -67,10 +76,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: const [
-                  _FeedTab(),
-                  _ChatsTab(),
-                ],
+                children: const [_FeedTab(), _ChatsTab()],
               ),
             ),
           ],
@@ -113,7 +119,12 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           return Padding(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              16,
+              20,
+              MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,23 +133,33 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                   child: Container(
                     width: 36,
                     height: 4,
-                    decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Create Post', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                const Text(
+                  'Create Post',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: textController,
                   maxLines: 4,
                   decoration: const InputDecoration(
-                    hintText: 'Share updates, ask questions, or link resources...',
+                    hintText:
+                        'Share updates, ask questions, or link resources...',
                     border: InputBorder.none,
                     filled: false,
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Select Tag:', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                const Text(
+                  'Select Tag:',
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
@@ -207,17 +228,30 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                       margin: const EdgeInsets.only(top: 10, bottom: 8),
                       width: 36,
                       height: 4,
-                      decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
                       child: Row(
                         children: [
-                          const Icon(Icons.comment_outlined, size: 20, color: AppColors.primary),
+                          const Icon(
+                            Icons.comment_outlined,
+                            size: 20,
+                            color: AppColors.primary,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Comments (${post.commentCount})',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ],
                       ),
@@ -247,31 +281,49 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                                   children: [
                                     CircleAvatar(
                                       radius: 16,
-                                      backgroundImage: comment.authorPhoto.isNotEmpty ? NetworkImage(comment.authorPhoto) : null,
-                                      child: comment.authorPhoto.isEmpty ? const Icon(Icons.person, size: 16) : null,
+                                      backgroundImage:
+                                          comment.authorPhoto.isNotEmpty
+                                          ? NetworkImage(comment.authorPhoto)
+                                          : null,
+                                      child: comment.authorPhoto.isEmpty
+                                          ? const Icon(Icons.person, size: 16)
+                                          : null,
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             children: [
                                               Text(
                                                 comment.authorName,
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
                                               ),
                                               const SizedBox(width: 8),
                                               Text(
-                                                DateFormat('hh:mm a').format(comment.createdAt),
-                                                style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                                                DateFormat(
+                                                  'hh:mm a',
+                                                ).format(comment.createdAt),
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: AppColors.textMuted,
+                                                ),
                                               ),
                                             ],
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
                                             comment.text,
-                                            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.3),
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: AppColors.textSecondary,
+                                              height: 1.3,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -282,13 +334,19 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                             },
                           );
                         },
-                        loading: () => const Center(child: CircularProgressIndicator()),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
                         error: (e, s) => Center(child: Text('Error: $e')),
                       ),
                     ),
                     const Divider(height: 1),
                     Container(
-                      padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        8,
+                        16,
+                        MediaQuery.of(context).viewInsets.bottom + 16,
+                      ),
                       color: AppColors.surface,
                       child: Row(
                         children: [
@@ -297,7 +355,10 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                               controller: commentController,
                               decoration: const InputDecoration(
                                 hintText: 'Write a comment...',
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
                               ),
                             ),
                           ),
@@ -313,10 +374,15 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                                 text: commentController.text.trim(),
                                 createdAt: DateTime.now(),
                               );
-                              await ref.read(databaseRepositoryProvider).addComment(post.id, comment);
+                              await ref
+                                  .read(databaseRepositoryProvider)
+                                  .addComment(post.id, comment);
                               commentController.clear();
                             },
-                            icon: const Icon(Icons.send_rounded, color: AppColors.primary),
+                            icon: const Icon(
+                              Icons.send_rounded,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ],
                       ),
@@ -359,8 +425,12 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                     label: Text(
                       tag['label']!,
                       style: TextStyle(
-                        color: isSelected ? Colors.white : AppColors.textSecondary,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected
+                            ? Colors.white
+                            : AppColors.textSecondary,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                     selected: isSelected,
@@ -369,7 +439,9 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                     },
                     selectedColor: AppColors.primary,
                     backgroundColor: AppColors.surfaceLight,
-                    side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
+                    side: BorderSide(
+                      color: isSelected ? AppColors.primary : AppColors.border,
+                    ),
                   ),
                 );
               }).toList(),
@@ -388,7 +460,10 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   itemCount: posts.length,
                   itemBuilder: (context, index) {
                     final post = posts[index];
@@ -404,8 +479,12 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                             children: [
                               CircleAvatar(
                                 radius: 18,
-                                backgroundImage: post.authorPhoto.isNotEmpty ? NetworkImage(post.authorPhoto) : null,
-                                child: post.authorPhoto.isEmpty ? const Icon(Icons.person) : null,
+                                backgroundImage: post.authorPhoto.isNotEmpty
+                                    ? NetworkImage(post.authorPhoto)
+                                    : null,
+                                child: post.authorPhoto.isEmpty
+                                    ? const Icon(Icons.person)
+                                    : null,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -414,25 +493,46 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                                   children: [
                                     Text(
                                       post.authorName,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                     Text(
-                                      DateFormat('MMM dd, hh:mm a').format(post.createdAt),
-                                      style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                                      DateFormat(
+                                        'MMM dd, hh:mm a',
+                                      ).format(post.createdAt),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: AppColors.textMuted,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                                  border: Border.all(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                  ),
                                 ),
                                 child: Text(
                                   '#${post.tag}',
-                                  style: const TextStyle(color: AppColors.primary, fontSize: 9, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -440,7 +540,11 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                           const SizedBox(height: 12),
                           Text(
                             post.text,
-                            style: const TextStyle(fontSize: 14, color: AppColors.textPrimary, height: 1.4),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                              height: 1.4,
+                            ),
                           ),
                           const Divider(height: 24),
                           Row(
@@ -448,26 +552,42 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                               // Like Button
                               IconButton(
                                 onPressed: () {
-                                  ref.read(databaseRepositoryProvider).toggleLikePost(user.uid, post.id);
+                                  ref
+                                      .read(databaseRepositoryProvider)
+                                      .toggleLikePost(user.uid, post.id);
                                 },
                                 icon: Icon(
-                                  hasLiked ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
-                                  color: hasLiked ? Colors.redAccent : AppColors.textMuted,
+                                  hasLiked
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_outline_rounded,
+                                  color: hasLiked
+                                      ? Colors.redAccent
+                                      : AppColors.textMuted,
                                 ),
                               ),
                               Text(
                                 '${post.likes.length}',
-                                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                               const SizedBox(width: 24),
                               // Comment Button
                               IconButton(
-                                onPressed: () => _showCommentsSheet(context, post, user),
-                                icon: const Icon(Icons.comment_outlined, color: AppColors.textMuted),
+                                onPressed: () =>
+                                    _showCommentsSheet(context, post, user),
+                                icon: const Icon(
+                                  Icons.comment_outlined,
+                                  color: AppColors.textMuted,
+                                ),
                               ),
                               Text(
                                 '${post.commentCount}',
-                                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ],
                           ),
@@ -491,11 +611,16 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
 class _ChatsTab extends ConsumerWidget {
   const _ChatsTab();
 
-  void _openChatRoom(BuildContext context, ChatChannelModel channel, dynamic user) {
+  void _openChatRoom(
+    BuildContext context,
+    ChatChannelModel channel,
+    dynamic user,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => _ChatRoomScreen(channel: channel, currentUser: user),
+        builder: (context) =>
+            _ChatRoomScreen(channel: channel, currentUser: user),
       ),
     );
   }
@@ -523,8 +648,12 @@ class _ChatsTab extends ConsumerWidget {
           itemCount: channels.length,
           itemBuilder: (context, index) {
             final channel = channels[index];
-            final icon = channel.type == 'domain' ? Icons.tag_rounded : Icons.campaign_rounded;
-            final subtitle = channel.type == 'domain' ? 'Domain Discussion' : 'General Channel';
+            final icon = channel.type == 'domain'
+                ? Icons.tag_rounded
+                : Icons.campaign_rounded;
+            final subtitle = channel.type == 'domain'
+                ? 'Domain Discussion'
+                : 'General Channel';
 
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
@@ -538,9 +667,22 @@ class _ChatsTab extends ConsumerWidget {
                   ),
                   child: Icon(icon, color: AppColors.primary, size: 20),
                 ),
-                title: Text(channel.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.textMuted),
+                title: Text(
+                  channel.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                trailing: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: AppColors.textMuted,
+                ),
                 onTap: () => _openChatRoom(context, channel, user),
               ),
             );
@@ -597,10 +739,7 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.channel.name),
-        centerTitle: false,
-      ),
+      appBar: AppBar(title: Text(widget.channel.name), centerTitle: false),
       body: Column(
         children: [
           Expanded(
@@ -616,7 +755,9 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                 }
 
                 // Scroll on first load
-                WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => _scrollToBottom(),
+                );
 
                 return ListView.builder(
                   controller: _scrollController,
@@ -629,29 +770,46 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Row(
-                        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                        mainAxisAlignment: isMe
+                            ? MainAxisAlignment.end
+                            : MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (!isMe) ...[
                             CircleAvatar(
                               radius: 16,
-                              backgroundImage: msg.senderPhoto.isNotEmpty ? NetworkImage(msg.senderPhoto) : null,
-                              child: msg.senderPhoto.isEmpty ? const Icon(Icons.person, size: 16) : null,
+                              backgroundImage: msg.senderPhoto.isNotEmpty
+                                  ? NetworkImage(msg.senderPhoto)
+                                  : null,
+                              child: msg.senderPhoto.isEmpty
+                                  ? const Icon(Icons.person, size: 16)
+                                  : null,
                             ),
                             const SizedBox(width: 8),
                           ],
                           Flexible(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
                               decoration: BoxDecoration(
-                                color: isMe ? AppColors.primary : AppColors.surfaceLight,
+                                color: isMe
+                                    ? AppColors.primary
+                                    : AppColors.surfaceLight,
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(16),
                                   topRight: const Radius.circular(16),
-                                  bottomLeft: isMe ? const Radius.circular(16) : Radius.zero,
-                                  bottomRight: isMe ? Radius.zero : const Radius.circular(16),
+                                  bottomLeft: isMe
+                                      ? const Radius.circular(16)
+                                      : Radius.zero,
+                                  bottomRight: isMe
+                                      ? Radius.zero
+                                      : const Radius.circular(16),
                                 ),
-                                border: isMe ? null : Border.all(color: AppColors.border),
+                                border: isMe
+                                    ? null
+                                    : Border.all(color: AppColors.border),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -670,7 +828,9 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                                   Text(
                                     msg.text,
                                     style: TextStyle(
-                                      color: isMe ? Colors.white : AppColors.textPrimary,
+                                      color: isMe
+                                          ? Colors.white
+                                          : AppColors.textPrimary,
                                       fontSize: 13,
                                       height: 1.3,
                                     ),
@@ -682,7 +842,9 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                                       DateFormat('hh:mm a').format(msg.sentAt),
                                       style: TextStyle(
                                         fontSize: 9,
-                                        color: isMe ? Colors.white70 : AppColors.textMuted,
+                                        color: isMe
+                                            ? Colors.white70
+                                            : AppColors.textMuted,
                                       ),
                                     ),
                                   ),
@@ -702,7 +864,12 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
           ),
           const Divider(height: 1),
           Container(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              MediaQuery.of(context).viewInsets.bottom + 16,
+            ),
             color: AppColors.surface,
             child: Row(
               children: [
@@ -711,7 +878,10 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                     controller: _msgController,
                     decoration: const InputDecoration(
                       hintText: 'Type your message...',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                     ),
                     onSubmitted: (_) => _sendChatMessage(),
                   ),
@@ -719,7 +889,10 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: _sendChatMessage,
-                  icon: const Icon(Icons.send_rounded, color: AppColors.primary),
+                  icon: const Icon(
+                    Icons.send_rounded,
+                    color: AppColors.primary,
+                  ),
                 ),
               ],
             ),
@@ -741,7 +914,9 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
       sentAt: DateTime.now(),
     );
 
-    await ref.read(databaseRepositoryProvider).sendMessage(widget.channel.id, message);
+    await ref
+        .read(databaseRepositoryProvider)
+        .sendMessage(widget.channel.id, message);
     _msgController.clear();
   }
 }

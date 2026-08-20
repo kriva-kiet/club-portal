@@ -6,6 +6,7 @@ import '../../features/auth/login_screen.dart';
 import '../../features/auth/setup_profile_screen.dart';
 import '../../features/main_navigation_scaffold.dart';
 import '../../features/roadmap/roadmap_detail_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   // Watch the auth state to trigger redirect evaluations when it changes
@@ -18,7 +19,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       // Async state loading
       if (authState.isLoading) return null;
-      
+
       final user = authState.valueOrNull;
       final isLoggingIn = state.matchedLocation == '/login';
 
@@ -28,27 +29,39 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // 2. User IS authenticated, check if profile is complete (e.g. name or batch is empty)
-      final isProfileIncomplete = user.name.trim().isEmpty || user.batch.trim().isEmpty;
+      final isProfileIncomplete =
+          user.name.trim().isEmpty || user.batch.trim().isEmpty;
       if (isProfileIncomplete) {
         if (state.matchedLocation == '/setup-profile') return null;
         return '/setup-profile';
       }
 
-      // 3. User is authenticated and complete, prevent visiting auth screens
-      if (isLoggingIn || state.matchedLocation == '/setup-profile') {
+      // 3. Check if onboarding is needed
+      final prefs = ref.read(sharedPreferencesProvider);
+      final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+      if (!hasSeenOnboarding) {
+        if (state.matchedLocation == '/onboarding') return null;
+        return '/onboarding';
+      }
+
+      // 4. User is authenticated and complete, prevent visiting auth/onboarding screens
+      if (isLoggingIn ||
+          state.matchedLocation == '/setup-profile' ||
+          state.matchedLocation == '/onboarding') {
         return '/';
       }
 
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/setup-profile',
         builder: (context, state) => const SetupProfileScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: '/',

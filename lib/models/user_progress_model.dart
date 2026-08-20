@@ -3,7 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class UserProgressModel {
   final String uid;
   final String domainId;
-  final Map<String, DateTime> topicsCompleted; // Key: topicId, Value: completedAt
+  final Map<String, DateTime>
+  topicsCompleted; // Key: topicId, Value: completedAt
   final double percentComplete;
 
   UserProgressModel({
@@ -28,7 +29,8 @@ class UserProgressModel {
         if (completedAt is Timestamp) {
           topicsCompleted[key.toString()] = completedAt.toDate();
         } else if (completedAt is String) {
-          topicsCompleted[key.toString()] = DateTime.tryParse(completedAt) ?? DateTime.now();
+          topicsCompleted[key.toString()] =
+              DateTime.tryParse(completedAt) ?? DateTime.now();
         }
       }
     });

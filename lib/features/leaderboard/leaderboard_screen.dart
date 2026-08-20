@@ -21,7 +21,9 @@ class LeaderboardScreen extends ConsumerWidget {
       body: leaderboardAsync.when(
         data: (users) {
           if (users.isEmpty) {
-            return const Center(child: Text('No users in the leaderboard yet.'));
+            return const Center(
+              child: Text('No users in the leaderboard yet.'),
+            );
           }
 
           // Ranks 1, 2, and 3
@@ -33,7 +35,10 @@ class LeaderboardScreen extends ConsumerWidget {
               // Visual Podium
               if (podiumUsers.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -104,8 +109,12 @@ class LeaderboardScreen extends ConsumerWidget {
                             const SizedBox(width: 12),
                             CircleAvatar(
                               radius: 18,
-                              backgroundImage: user.photoUrl.isNotEmpty ? NetworkImage(user.photoUrl) : null,
-                              child: user.photoUrl.isEmpty ? const Icon(Icons.person) : null,
+                              backgroundImage: user.photoUrl.isNotEmpty
+                                  ? NetworkImage(user.photoUrl)
+                                  : null,
+                              child: user.photoUrl.isEmpty
+                                  ? const Icon(Icons.person)
+                                  : null,
                             ),
                           ],
                         ),
@@ -115,12 +124,19 @@ class LeaderboardScreen extends ConsumerWidget {
                         ),
                         subtitle: Text(
                           user.batch,
-                          style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.local_fire_department_rounded, color: AppColors.accent, size: 20),
+                            const Icon(
+                              Icons.local_fire_department_rounded,
+                              color: AppColors.accent,
+                              size: 20,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${user.streak.count}',
@@ -215,7 +231,11 @@ class LeaderboardScreen extends ConsumerWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.local_fire_department_rounded, color: AppColors.accent, size: 14),
+            const Icon(
+              Icons.local_fire_department_rounded,
+              color: AppColors.accent,
+              size: 14,
+            ),
             const SizedBox(width: 2),
             Text(
               '${user.streak.count}',

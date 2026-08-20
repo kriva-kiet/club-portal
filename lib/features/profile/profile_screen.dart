@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/user_model.dart';
 import '../../services/service_providers.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../widgets/fancy_chip.dart';
 import '../../widgets/glass_container.dart';
 import '../admin/admin_dashboard_screen.dart';
 
@@ -26,46 +28,71 @@ class ProfileScreen extends ConsumerWidget {
               // Profile Hero Header
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
+                padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  border: Border(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.2),
+                      AppColors.background,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  border: const Border(
                     bottom: BorderSide(color: AppColors.border, width: 1),
                   ),
                 ),
                 child: Column(
                   children: [
-                    // Avatar
+                    // Avatar with glow
                     Container(
-                      width: 90,
-                      height: 90,
+                      width: 100,
+                      height: 100,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.primary, width: 2.5),
+                        border: Border.all(color: AppColors.primary, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            spreadRadius: 4,
+                          ),
+                        ],
                       ),
                       child: ClipOval(
                         child: user.photoUrl.isNotEmpty
                             ? Image.network(user.photoUrl, fit: BoxFit.cover)
-                            : const Icon(Icons.person, size: 50, color: AppColors.textSecondary),
+                            : const Icon(
+                                Icons.person,
+                                size: 50,
+                                color: AppColors.textSecondary,
+                              ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     Text(
                       user.name,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w800),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.5),
+                            ),
                           ),
                           child: Text(
                             user.role.name.toUpperCase(),
@@ -77,49 +104,57 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 12),
                         Text(
                           user.batch,
-                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    if (user.bio.isNotEmpty)
+                    if (user.bio.isNotEmpty) ...[
+                      const SizedBox(height: 16),
                       Text(
                         user.bio,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 14,
-                          height: 1.4,
+                          height: 1.5,
                         ),
                       ),
+                    ],
                   ],
                 ),
               ),
 
               // Stats row
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 20,
+                ),
                 child: Row(
                   children: [
                     _StatCard(
-                      label: 'Day Streak',
+                      label: AppLocalizations.of(context)?.translate('streak_label') ?? 'Day Streak',
                       value: '${user.streak.count}',
                       icon: Icons.local_fire_department_rounded,
                       color: AppColors.accent,
                     ),
                     const SizedBox(width: 12),
                     _StatCard(
-                      label: 'Club ID',
+                      label: AppLocalizations.of(context)?.translate('club_id_label') ?? 'Club ID',
                       value: user.clubId.isNotEmpty ? user.clubId : '—',
                       icon: Icons.badge_outlined,
                       color: AppColors.secondary,
                     ),
                     const SizedBox(width: 12),
                     _StatCard(
-                      label: 'Domains',
+                      label: AppLocalizations.of(context)?.translate('domains_label') ?? 'Domains',
                       value: '${user.domainsFollowing.length}',
                       icon: Icons.map_rounded,
                       color: AppColors.success,
@@ -129,9 +164,14 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               // Admin Portal shortcut button
-              if (user.role == UserRole.admin || user.role == UserRole.lead || user.role == UserRole.developer) ...[
+              if (user.role == UserRole.admin ||
+                  user.role == UserRole.lead ||
+                  user.role == UserRole.developer) ...[
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
                   child: InkWell(
                     onTap: () {
                       Navigator.push(
@@ -143,7 +183,10 @@ class ProfileScreen extends ConsumerWidget {
                     },
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 20,
+                      ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -159,7 +202,11 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.admin_panel_settings_rounded, color: AppColors.accent, size: 24),
+                          const Icon(
+                            Icons.admin_panel_settings_rounded,
+                            color: AppColors.accent,
+                            size: 24,
+                          ),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
@@ -176,12 +223,18 @@ class ProfileScreen extends ConsumerWidget {
                                 SizedBox(height: 2),
                                 Text(
                                   'Manage members, roadmaps, and broadcasts',
-                                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textMuted,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppColors.textMuted,
+                          ),
                         ],
                       ),
                     ),
@@ -198,10 +251,9 @@ class ProfileScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'Following Domains',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     domainsAsync.when(
@@ -218,27 +270,18 @@ class ProfileScreen extends ConsumerWidget {
                         }
 
                         return Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                          spacing: 12,
+                          runSpacing: 12,
                           children: followed
-                              .map((d) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                          color: AppColors.primary.withValues(alpha: 0.3), width: 1),
-                                    ),
-                                    child: Text(
-                                      d.name,
-                                      style: const TextStyle(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ))
+                              .map(
+                                (d) => FancyChip(
+                                  label: d.name,
+                                  isSelected: true,
+                                  onSelected: (selected) {
+                                    // Toggle domain logic
+                                  },
+                                ),
+                              )
                               .toList(),
                         );
                       },
@@ -259,10 +302,9 @@ class ProfileScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'Verified Credentials',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     domainsAsync.when(
@@ -274,7 +316,10 @@ class ProfileScreen extends ConsumerWidget {
                         if (followed.isEmpty) {
                           return const Text(
                             'No certificates earned yet.',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 13,
+                            ),
                           );
                         }
 
@@ -282,54 +327,85 @@ class ProfileScreen extends ConsumerWidget {
                           children: followed.map((domain) {
                             return Consumer(
                               builder: (context, ref, _) {
-                                final progressAsync = ref.watch(userProgressProvider(domain.id));
+                                final progressAsync = ref.watch(
+                                  userProgressProvider(domain.id),
+                                );
 
                                 return progressAsync.when(
                                   data: (progress) {
-                                    final isCompleted = (progress?.percentComplete ?? 0.0) >= 1.0;
-                                    
+                                    final isCompleted =
+                                        (progress?.percentComplete ?? 0.0) >=
+                                        1.0;
+
                                     // If not 100% complete, show a teaser progress box
                                     if (!isCompleted) {
                                       return const SizedBox.shrink();
                                     }
 
                                     return Padding(
-                                      padding: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.only(
+                                        bottom: 10,
+                                      ),
                                       child: GlassContainer(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
                                         child: Row(
                                           children: [
-                                            const Icon(Icons.verified_user_rounded, color: AppColors.success, size: 28),
+                                            const Icon(
+                                              Icons.verified_user_rounded,
+                                              color: AppColors.success,
+                                              size: 28,
+                                            ),
                                             const SizedBox(width: 14),
                                             Expanded(
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
                                                     '${domain.name} Expert',
                                                     style: const TextStyle(
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       fontSize: 14,
-                                                      color: AppColors.textPrimary,
+                                                      color:
+                                                          AppColors.textPrimary,
                                                     ),
                                                   ),
                                                   const SizedBox(height: 2),
                                                   const Text(
                                                     '100% Roadmap Completed',
-                                                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color:
+                                                          AppColors.textMuted,
+                                                    ),
                                                   ),
                                                 ],
                                               ),
                                             ),
                                             TextButton.icon(
                                               onPressed: () {
-                                                _showCertificate(context, user.name, domain.name);
+                                                _showCertificate(
+                                                  context,
+                                                  user.name,
+                                                  domain.name,
+                                                );
                                               },
-                                              icon: const Icon(Icons.workspace_premium_rounded, size: 16),
+                                              icon: const Icon(
+                                                Icons.workspace_premium_rounded,
+                                                size: 16,
+                                              ),
                                               label: const Text('View Cert'),
                                               style: TextButton.styleFrom(
-                                                foregroundColor: AppColors.secondary,
-                                                textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                                foregroundColor:
+                                                    AppColors.secondary,
+                                                textStyle: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
                                             ),
                                           ],
@@ -352,20 +428,94 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+
+              // Language Setting Card
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: GlassContainer(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.language_rounded,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          AppLocalizations.of(
+                                context,
+                              )?.translate('language_setting') ??
+                              'App Language',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      DropdownButton<String>(
+                        value: ref.watch(localeProvider).languageCode,
+                        underline: const SizedBox.shrink(),
+                        dropdownColor: AppColors.surface,
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: AppColors.textSecondary,
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'en',
+                            child: Text(
+                              'English',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'es',
+                            child: Text(
+                              'Español',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ],
+                        onChanged: (langCode) {
+                          if (langCode != null) {
+                            ref
+                                .read(localeProvider.notifier)
+                                .setLocale(langCode);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
 
               // Sign out
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    await ref.read(authRepositoryProvider).signOut();
-                  },
-                  icon: const Icon(Icons.logout_rounded, size: 18),
-                  label: const Text('Sign Out'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error, width: 1),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48, // Accessibility target
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await ref.read(authRepositoryProvider).signOut();
+                    },
+                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    label: const Text('Sign Out'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(
+                        color: AppColors.error,
+                        width: 1.2,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -378,7 +528,11 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _showCertificate(BuildContext context, String userName, String domainName) {
+  void _showCertificate(
+    BuildContext context,
+    String userName,
+    String domainName,
+  ) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -386,7 +540,10 @@ class ProfileScreen extends ConsumerWidget {
         child: GlassContainer(
           padding: const EdgeInsets.all(28),
           color: AppColors.surface.withValues(alpha: 0.85),
-          border: Border.all(color: AppColors.accent.withValues(alpha: 0.4), width: 1.5),
+          border: Border.all(
+            color: AppColors.accent.withValues(alpha: 0.4),
+            width: 1.5,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -395,7 +552,10 @@ class ProfileScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.4), width: 2),
+                  border: Border.all(
+                    color: AppColors.accent.withValues(alpha: 0.4),
+                    width: 2,
+                  ),
                 ),
                 child: ClipOval(
                   child: Image.asset(
@@ -429,7 +589,11 @@ class ProfileScreen extends ConsumerWidget {
               const Divider(height: 32, color: AppColors.border),
               const Text(
                 'This credential confirms that',
-                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: AppColors.textSecondary),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 10),
               Text(
@@ -444,15 +608,24 @@ class ProfileScreen extends ConsumerWidget {
               const Text(
                 'has successfully completed all module checkpoints, passed all verification quizzes, and mastered the technical domain curriculum for:',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.textSecondary),
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 14),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.secondary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.secondary.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Text(
                   domainName.toUpperCase(),
@@ -471,17 +644,42 @@ class ProfileScreen extends ConsumerWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
-                      Text('VERIFIED DATE', style: TextStyle(fontSize: 9, color: AppColors.textMuted)),
+                      Text(
+                        'VERIFIED DATE',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
                       SizedBox(height: 2),
-                      Text('20 Aug 2026', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text(
+                        '20 Aug 2026',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: const [
-                      Text('ISSUED BY', style: TextStyle(fontSize: 9, color: AppColors.textMuted)),
+                      Text(
+                        'ISSUED BY',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
                       SizedBox(height: 2),
-                      Text('KRIVA Club Board', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                      Text(
+                        'KRIVA Club Board',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -495,7 +693,11 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 child: Text(
                   'Verification Hash: SHA256-${domainName.hashCode.abs().toRadixString(16).padLeft(8, '0')}',
-                  style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: AppColors.textMuted),
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontFamily: 'monospace',
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -504,14 +706,18 @@ class ProfileScreen extends ConsumerWidget {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Certificate downloaded successfully (PDF)!'),
+                      content: Text(
+                        'Certificate downloaded successfully (PDF)!',
+                      ),
                       backgroundColor: AppColors.success,
                     ),
                   );
                 },
                 icon: const Icon(Icons.download_rounded, size: 18),
                 label: const Text('Download PDF'),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                ),
               ),
             ],
           ),
@@ -559,10 +765,7 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11,
-              ),
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
             ),
           ],
         ),

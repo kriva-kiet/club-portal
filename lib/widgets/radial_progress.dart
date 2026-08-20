@@ -24,7 +24,8 @@ class RadialProgress extends StatefulWidget {
   State<RadialProgress> createState() => _RadialProgressState();
 }
 
-class _RadialProgressState extends State<RadialProgress> with SingleTickerProviderStateMixin {
+class _RadialProgressState extends State<RadialProgress>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -36,9 +37,10 @@ class _RadialProgressState extends State<RadialProgress> with SingleTickerProvid
       duration: const Duration(milliseconds: 1200),
     );
 
-    _animation = Tween<double>(begin: 0.0, end: widget.percentage).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _animation = Tween<double>(
+      begin: 0.0,
+      end: widget.percentage,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _controller.forward();
   }
@@ -47,9 +49,13 @@ class _RadialProgressState extends State<RadialProgress> with SingleTickerProvid
   void didUpdateWidget(covariant RadialProgress oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.percentage != oldWidget.percentage) {
-      _animation = Tween<double>(begin: oldWidget.percentage, end: widget.percentage).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-      );
+      _animation =
+          Tween<double>(
+            begin: oldWidget.percentage,
+            end: widget.percentage,
+          ).animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+          );
       _controller.forward(from: 0.0);
     }
   }
@@ -77,7 +83,9 @@ class _RadialProgressState extends State<RadialProgress> with SingleTickerProvid
                   percentage: _animation.value,
                   strokeWidth: widget.strokeWidth,
                   activeColor: widget.activeColor,
-                  trackColor: widget.trackColor ?? AppColors.border.withValues(alpha: 0.5),
+                  trackColor:
+                      widget.trackColor ??
+                      AppColors.border.withValues(alpha: 0.5),
                 ),
               );
             },

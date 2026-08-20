@@ -7,7 +7,7 @@ class AppTheme {
 
   static ThemeData get darkTheme {
     final baseTheme = ThemeData.dark();
-    
+
     return baseTheme.copyWith(
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: const ColorScheme.dark(
@@ -20,7 +20,7 @@ class AppTheme {
         onSurface: AppColors.textPrimary,
         onError: Colors.white,
       ),
-      
+
       // Typography
       textTheme: GoogleFonts.outfitTextTheme(baseTheme.textTheme).copyWith(
         titleLarge: GoogleFonts.outfit(
@@ -96,7 +96,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface.withValues(alpha: 0.5),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.border, width: 1),
@@ -117,10 +120,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
-        hintStyle: GoogleFonts.outfit(
-          color: AppColors.textMuted,
-          fontSize: 15,
-        ),
+        hintStyle: GoogleFonts.outfit(color: AppColors.textMuted, fontSize: 15),
         labelStyle: GoogleFonts.outfit(
           color: AppColors.textSecondary,
           fontSize: 15,

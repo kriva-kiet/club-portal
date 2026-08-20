@@ -26,10 +26,14 @@ class HackathonModel {
       description: map['description'] ?? '',
       startDate: start is Timestamp
           ? start.toDate()
-          : (start is String ? (DateTime.tryParse(start) ?? DateTime.now()) : DateTime.now()),
+          : (start is String
+                ? (DateTime.tryParse(start) ?? DateTime.now())
+                : DateTime.now()),
       endDate: end is Timestamp
           ? end.toDate()
-          : (end is String ? (DateTime.tryParse(end) ?? DateTime.now()) : DateTime.now()),
+          : (end is String
+                ? (DateTime.tryParse(end) ?? DateTime.now())
+                : DateTime.now()),
       teamSizeLimit: map['teamSizeLimit'] ?? 4,
     );
   }

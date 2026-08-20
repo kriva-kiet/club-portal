@@ -23,8 +23,10 @@ class BroadcastModel {
 
   factory BroadcastModel.fromMap(Map<String, dynamic> map, String id) {
     final sent = map['sentAt'];
-    final audience = map['audience'] is Map ? Map<String, dynamic>.from(map['audience']) : {};
-    
+    final audience = map['audience'] is Map
+        ? Map<String, dynamic>.from(map['audience'])
+        : {};
+
     return BroadcastModel(
       id: id,
       title: map['title'] ?? '',
@@ -32,9 +34,11 @@ class BroadcastModel {
       audienceType: audience['type'] ?? 'all',
       audienceValue: audience['value'] ?? '',
       sentBy: map['sentBy'] ?? '',
-      sentAt: sent is Timestamp 
-          ? sent.toDate() 
-          : (sent is String ? (DateTime.tryParse(sent) ?? DateTime.now()) : DateTime.now()),
+      sentAt: sent is Timestamp
+          ? sent.toDate()
+          : (sent is String
+                ? (DateTime.tryParse(sent) ?? DateTime.now())
+                : DateTime.now()),
       readBy: List<String>.from(map['readBy'] ?? []),
     );
   }
@@ -43,10 +47,7 @@ class BroadcastModel {
     return {
       'title': title,
       'body': body,
-      'audience': {
-        'type': audienceType,
-        'value': audienceValue,
-      },
+      'audience': {'type': audienceType, 'value': audienceValue},
       'sentBy': sentBy,
       'sentAt': Timestamp.fromDate(sentAt),
       'readBy': readBy,

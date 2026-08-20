@@ -3,11 +3,7 @@ class ResourceModel {
   final String url;
   final String type; // 'video' | 'link' | 'doc' | 'practice'
 
-  ResourceModel({
-    required this.title,
-    required this.url,
-    required this.type,
-  });
+  ResourceModel({required this.title, required this.url, required this.type});
 
   factory ResourceModel.fromMap(Map<String, dynamic> map) {
     return ResourceModel(
@@ -18,11 +14,7 @@ class ResourceModel {
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'url': url,
-      'type': type,
-    };
+    return {'title': title, 'url': url, 'type': type};
   }
 }
 
@@ -41,7 +33,11 @@ class TopicModel {
     required this.resources,
   });
 
-  factory TopicModel.fromMap(Map<String, dynamic> map, String id, String moduleId) {
+  factory TopicModel.fromMap(
+    Map<String, dynamic> map,
+    String id,
+    String moduleId,
+  ) {
     final resourcesList = map['resources'] as List? ?? [];
     return TopicModel(
       id: id,
@@ -92,7 +88,12 @@ class ModuleModel {
     required this.topics,
   });
 
-  factory ModuleModel.fromMap(Map<String, dynamic> map, String id, String domainId, {List<TopicModel>? topics}) {
+  factory ModuleModel.fromMap(
+    Map<String, dynamic> map,
+    String id,
+    String domainId, {
+    List<TopicModel>? topics,
+  }) {
     return ModuleModel(
       id: id,
       domainId: domainId,
@@ -103,17 +104,10 @@ class ModuleModel {
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'order': order,
-    };
+    return {'title': title, 'order': order};
   }
 
-  ModuleModel copyWith({
-    String? title,
-    int? order,
-    List<TopicModel>? topics,
-  }) {
+  ModuleModel copyWith({String? title, int? order, List<TopicModel>? topics}) {
     return ModuleModel(
       id: id,
       domainId: domainId,
@@ -129,6 +123,7 @@ class DomainModel {
   final String name;
   final String description;
   final String leadUserId;
+  final String password;
   final List<ModuleModel> modules;
 
   DomainModel({
@@ -136,15 +131,21 @@ class DomainModel {
     required this.name,
     required this.description,
     required this.leadUserId,
+    required this.password,
     required this.modules,
   });
 
-  factory DomainModel.fromMap(Map<String, dynamic> map, String id, {List<ModuleModel>? modules}) {
+  factory DomainModel.fromMap(
+    Map<String, dynamic> map,
+    String id, {
+    List<ModuleModel>? modules,
+  }) {
     return DomainModel(
       id: id,
       name: map['name'] ?? '',
       description: map['description'] ?? '',
       leadUserId: map['leadUserId'] ?? '',
+      password: map['password'] ?? '',
       modules: modules ?? [],
     );
   }
@@ -154,6 +155,7 @@ class DomainModel {
       'name': name,
       'description': description,
       'leadUserId': leadUserId,
+      'password': password,
     };
   }
 
@@ -161,6 +163,7 @@ class DomainModel {
     String? name,
     String? description,
     String? leadUserId,
+    String? password,
     List<ModuleModel>? modules,
   }) {
     return DomainModel(
@@ -168,6 +171,7 @@ class DomainModel {
       name: name ?? this.name,
       description: description ?? this.description,
       leadUserId: leadUserId ?? this.leadUserId,
+      password: password ?? this.password,
       modules: modules ?? this.modules,
     );
   }

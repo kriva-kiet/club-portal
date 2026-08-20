@@ -23,11 +23,7 @@ class ChatChannelModel {
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'type': type,
-      'domainId': domainId,
-    };
+    return {'name': name, 'type': type, 'domainId': domainId};
   }
 }
 
@@ -58,7 +54,9 @@ class MessageModel {
       text: map['text'] ?? '',
       sentAt: sa is Timestamp
           ? sa.toDate()
-          : (sa is String ? (DateTime.tryParse(sa) ?? DateTime.now()) : DateTime.now()),
+          : (sa is String
+                ? (DateTime.tryParse(sa) ?? DateTime.now())
+                : DateTime.now()),
     );
   }
 

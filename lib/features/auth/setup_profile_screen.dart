@@ -14,7 +14,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
-  
+
   String _selectedBatch = 'Batch of 2026';
   final List<String> _selectedDomains = [];
   String _avatarSeed = '';
@@ -55,8 +55,9 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
-      final photoUrl = 'https://api.dicebear.com/7.x/avataaars/svg?seed=${_avatarSeed.isEmpty ? "kriva" : _avatarSeed}';
-      
+      final photoUrl =
+          'https://api.dicebear.com/7.x/avataaars/png?seed=${_avatarSeed.isEmpty ? "kriva" : _avatarSeed}';
+
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.completeProfile(
         name: _nameController.text.trim(),
@@ -65,7 +66,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
         domains: _selectedDomains,
         photoUrl: photoUrl,
       );
-      
+
       // GoRouter authState changes will automatically trigger redirection to home
     } catch (e) {
       scaffoldMessenger.showSnackBar(
@@ -109,7 +110,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
               ),
             ),
           ),
-          
+
           SafeArea(
             child: Form(
               key: _formKey,
@@ -127,18 +128,22 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                             height: 110,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.primary, width: 2),
+                              border: Border.all(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
                               color: AppColors.surface,
                             ),
                             child: ClipOval(
                               child: Image.network(
-                                'https://api.dicebear.com/7.x/avataaars/svg?seed=${_avatarSeed.isEmpty ? "kriva" : _avatarSeed}',
+                                'https://api.dicebear.com/7.x/avataaars/png?seed=${_avatarSeed.isEmpty ? "kriva" : _avatarSeed}',
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(
-                                  Icons.account_circle_outlined,
-                                  size: 80,
-                                  color: AppColors.textSecondary,
-                                ),
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(
+                                      Icons.account_circle_outlined,
+                                      size: 80,
+                                      color: AppColors.textSecondary,
+                                    ),
                               ),
                             ),
                           ),
@@ -195,7 +200,8 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                       maxLines: 3,
                       decoration: const InputDecoration(
                         labelText: 'Bio',
-                        hintText: 'Share your background, interests, or what you want to learn...',
+                        hintText:
+                            'Share your background, interests, or what you want to learn...',
                         prefixIcon: Padding(
                           padding: EdgeInsets.only(bottom: 40.0),
                           child: Icon(Icons.description_outlined, size: 20),
@@ -242,7 +248,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // Domain loader
                     domainsAsync.when(
                       data: (domains) {
@@ -253,21 +259,31 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                           spacing: 8.0,
                           runSpacing: 4.0,
                           children: domains.map((domain) {
-                            final isSelected = _selectedDomains.contains(domain.id);
+                            final isSelected = _selectedDomains.contains(
+                              domain.id,
+                            );
                             return FilterChip(
                               label: Text(domain.name),
                               selected: isSelected,
-                              selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                              selectedColor: AppColors.primary.withValues(
+                                alpha: 0.2,
+                              ),
                               checkmarkColor: AppColors.primary,
                               labelStyle: TextStyle(
-                                color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                               backgroundColor: AppColors.surface,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                                 side: BorderSide(
-                                  color: isSelected ? AppColors.primary : AppColors.border,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.border,
                                   width: 1,
                                 ),
                               ),
@@ -284,12 +300,11 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                           }).toList(),
                         );
                       },
-                      loading: () => const Center(
-                        child: LinearProgressIndicator(),
-                      ),
+                      loading: () =>
+                          const Center(child: LinearProgressIndicator()),
                       error: (e, s) => Text('Error loading interests: $e'),
                     ),
-                    
+
                     const SizedBox(height: 36),
 
                     // Save Button

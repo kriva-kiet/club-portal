@@ -39,7 +39,9 @@ class PostModel {
       commentCount: map['commentCount'] ?? 0,
       createdAt: ca is Timestamp
           ? ca.toDate()
-          : (ca is String ? (DateTime.tryParse(ca) ?? DateTime.now()) : DateTime.now()),
+          : (ca is String
+                ? (DateTime.tryParse(ca) ?? DateTime.now())
+                : DateTime.now()),
     );
   }
 
@@ -109,7 +111,9 @@ class CommentModel {
       text: map['text'] ?? '',
       createdAt: ca is Timestamp
           ? ca.toDate()
-          : (ca is String ? (DateTime.tryParse(ca) ?? DateTime.now()) : DateTime.now()),
+          : (ca is String
+                ? (DateTime.tryParse(ca) ?? DateTime.now())
+                : DateTime.now()),
     );
   }
 

@@ -9,12 +9,14 @@ import '../../models/session_model.dart';
 import '../../services/service_providers.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/glowing_card.dart';
+import '../../core/localization/app_localizations.dart';
 
 class CollaborationScreen extends ConsumerStatefulWidget {
   const CollaborationScreen({super.key});
 
   @override
-  ConsumerState<CollaborationScreen> createState() => _CollaborationScreenState();
+  ConsumerState<CollaborationScreen> createState() =>
+      _CollaborationScreenState();
 }
 
 class _CollaborationScreenState extends ConsumerState<CollaborationScreen>
@@ -43,14 +45,19 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen>
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
               child: Row(
                 children: [
-                  const Icon(Icons.hub_rounded, color: AppColors.primary, size: 28),
+                  const Icon(
+                    Icons.hub_rounded,
+                    color: AppColors.primary,
+                    size: 28,
+                  ),
                   const SizedBox(width: 12),
                   Text(
-                    'Collaboration',
+                    AppLocalizations.of(context)?.translate('collab_title') ??
+                        'Collaboration',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 24,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 24,
+                    ),
                   ),
                 ],
               ),
@@ -60,7 +67,10 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen>
               indicatorColor: AppColors.primary,
               labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.textMuted,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
               tabs: const [
                 Tab(text: 'Sessions'),
                 Tab(text: 'Hackathons'),
@@ -69,10 +79,7 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: const [
-                  _SessionsTab(),
-                  _HackathonsTab(),
-                ],
+                children: const [_SessionsTab(), _HackathonsTab()],
               ),
             ),
           ],
@@ -102,7 +109,8 @@ class _SessionsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionsAsync = ref.watch(sessionsProvider);
     final user = ref.watch(currentUserProvider);
-    final isLeadOrAdmin = user != null &&
+    final isLeadOrAdmin =
+        user != null &&
         (user.role == UserRole.lead ||
             user.role == UserRole.admin ||
             user.role == UserRole.developer);
@@ -130,7 +138,9 @@ class _SessionsTab extends ConsumerWidget {
 
           // Sort: upcoming first, past sessions at the bottom
           final now = DateTime.now();
-          final upcoming = sessions.where((s) => s.dateTime.isAfter(now)).toList();
+          final upcoming = sessions
+              .where((s) => s.dateTime.isAfter(now))
+              .toList();
           final past = sessions.where((s) => s.dateTime.isBefore(now)).toList();
 
           return ListView(
@@ -141,10 +151,22 @@ class _SessionsTab extends ConsumerWidget {
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                   child: Text(
                     'Upcoming Sessions',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
-                ...upcoming.map((session) => _buildSessionCard(context, ref, session, user, isPast: false)),
+                ...upcoming.map(
+                  (session) => _buildSessionCard(
+                    context,
+                    ref,
+                    session,
+                    user,
+                    isPast: false,
+                  ),
+                ),
                 const SizedBox(height: 16),
               ],
               if (past.isNotEmpty) ...[
@@ -152,10 +174,22 @@ class _SessionsTab extends ConsumerWidget {
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                   child: Text(
                     'Past Sessions',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ),
-                ...past.map((session) => _buildSessionCard(context, ref, session, user, isPast: true)),
+                ...past.map(
+                  (session) => _buildSessionCard(
+                    context,
+                    ref,
+                    session,
+                    user,
+                    isPast: true,
+                  ),
+                ),
               ],
             ],
           );
@@ -166,7 +200,11 @@ class _SessionsTab extends ConsumerWidget {
     );
   }
 
-  void _showScheduleSessionSheet(BuildContext context, WidgetRef ref, UserModel? host) {
+  void _showScheduleSessionSheet(
+    BuildContext context,
+    WidgetRef ref,
+    UserModel? host,
+  ) {
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     final linkCtrl = TextEditingController();
@@ -195,7 +233,9 @@ class _SessionsTab extends ConsumerWidget {
                     children: [
                       Text(
                         'Schedule New Session',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(context),
@@ -206,46 +246,79 @@ class _SessionsTab extends ConsumerWidget {
                   const Divider(height: 24),
                   TextFormField(
                     controller: titleCtrl,
-                    decoration: const InputDecoration(labelText: 'Session Title', prefixIcon: Icon(Icons.title)),
+                    decoration: const InputDecoration(
+                      labelText: 'Session Title',
+                      prefixIcon: Icon(Icons.title),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: descCtrl,
-                    decoration: const InputDecoration(labelText: 'Description', prefixIcon: Icon(Icons.description)),
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      prefixIcon: Icon(Icons.description),
+                    ),
                     maxLines: 3,
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: selectedDomain,
-                    decoration: const InputDecoration(labelText: 'Domain Tag', prefixIcon: Icon(Icons.tag)),
+                    decoration: const InputDecoration(
+                      labelText: 'Domain Tag',
+                      prefixIcon: Icon(Icons.tag),
+                    ),
                     items: const [
-                      DropdownMenuItem(value: 'dsa', child: Text('Data Structures & Algorithms')),
-                      DropdownMenuItem(value: 'web_dev', child: Text('Web Development')),
-                      DropdownMenuItem(value: 'ml', child: Text('Machine Learning')),
+                      DropdownMenuItem(
+                        value: 'dsa',
+                        child: Text('Data Structures & Algorithms'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'web_dev',
+                        child: Text('Web Development'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ml',
+                        child: Text('Machine Learning'),
+                      ),
                     ],
                     onChanged: (val) => setState(() => selectedDomain = val!),
                   ),
                   const SizedBox(height: 12),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.calendar_month, color: AppColors.primary),
-                    title: Text(DateFormat('yyyy-MM-dd HH:mm').format(selectedDateTime)),
+                    leading: const Icon(
+                      Icons.calendar_month,
+                      color: AppColors.primary,
+                    ),
+                    title: Text(
+                      DateFormat('yyyy-MM-dd HH:mm').format(selectedDateTime),
+                    ),
                     trailing: TextButton(
                       onPressed: () async {
                         final date = await showDatePicker(
                           context: context,
                           initialDate: selectedDateTime,
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
                         );
                         if (date != null && context.mounted) {
                           final time = await showTimePicker(
                             context: context,
-                            initialTime: TimeOfDay.fromDateTime(selectedDateTime),
+                            initialTime: TimeOfDay.fromDateTime(
+                              selectedDateTime,
+                            ),
                           );
                           if (time != null) {
                             setState(() {
-                              selectedDateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                              selectedDateTime = DateTime(
+                                date.year,
+                                date.month,
+                                date.day,
+                                time.hour,
+                                time.minute,
+                              );
                             });
                           }
                         }
@@ -256,14 +329,21 @@ class _SessionsTab extends ConsumerWidget {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: linkCtrl,
-                    decoration: const InputDecoration(labelText: 'Meeting Link (Jitsi / Meet)', prefixIcon: Icon(Icons.link)),
+                    decoration: const InputDecoration(
+                      labelText: 'Meeting Link (Jitsi / Meet)',
+                      prefixIcon: Icon(Icons.link),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () async {
                       if (titleCtrl.text.isEmpty || linkCtrl.text.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter Title and Meeting Link')),
+                          const SnackBar(
+                            content: Text(
+                              'Please enter Title and Meeting Link',
+                            ),
+                          ),
                         );
                         return;
                       }
@@ -279,12 +359,16 @@ class _SessionsTab extends ConsumerWidget {
                         attendees: [],
                       );
                       Navigator.pop(context);
-                      await ref.read(databaseRepositoryProvider).createSession(newSession);
+                      await ref
+                          .read(databaseRepositoryProvider)
+                          .createSession(newSession);
                       ref.invalidate(sessionsProvider);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Class session scheduled successfully!'),
+                            content: Text(
+                              'Class session scheduled successfully!',
+                            ),
                             backgroundColor: AppColors.success,
                           ),
                         );
@@ -310,7 +394,8 @@ class _SessionsTab extends ConsumerWidget {
   }) {
     final domainColor = _domainColors[session.domainTag] ?? AppColors.primary;
     final domainIcon = _domainIcons[session.domainTag] ?? Icons.event_rounded;
-    final hasRsvpd = currentUser != null && session.rsvps.contains(currentUser.uid);
+    final hasRsvpd =
+        currentUser != null && session.rsvps.contains(currentUser.uid);
 
     return GlassContainer(
       margin: const EdgeInsets.only(bottom: 12),
@@ -341,28 +426,40 @@ class _SessionsTab extends ConsumerWidget {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
-                        color: isPast ? AppColors.textMuted : AppColors.textPrimary,
+                        color: isPast
+                            ? AppColors.textMuted
+                            : AppColors.textPrimary,
                         decoration: isPast ? TextDecoration.lineThrough : null,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Host: ${session.createdBy}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
               if (!isPast)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: domainColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     session.domainTag.toUpperCase(),
-                    style: TextStyle(color: domainColor, fontWeight: FontWeight.bold, fontSize: 10),
+                    style: TextStyle(
+                      color: domainColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
                   ),
                 ),
             ],
@@ -370,23 +467,41 @@ class _SessionsTab extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(
             session.description,
-            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              const Icon(Icons.access_time_rounded, size: 16, color: AppColors.textMuted),
+              const Icon(
+                Icons.access_time_rounded,
+                size: 16,
+                color: AppColors.textMuted,
+              ),
               const SizedBox(width: 6),
               Text(
                 DateFormat('MMM dd, hh:mm a').format(session.dateTime),
-                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
               ),
               const Spacer(),
-              const Icon(Icons.people_alt_outlined, size: 16, color: AppColors.textMuted),
+              const Icon(
+                Icons.people_alt_outlined,
+                size: 16,
+                color: AppColors.textMuted,
+              ),
               const SizedBox(width: 6),
               Text(
                 '${session.rsvps.length} RSVP${session.rsvps.length == 1 ? "" : "s"}',
-                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
           ),
@@ -397,26 +512,34 @@ class _SessionsTab extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      ref.read(databaseRepositoryProvider).toggleRSVP(
-                            currentUser.uid,
-                            session.id,
-                            !hasRsvpd,
-                          );
+                      ref
+                          .read(databaseRepositoryProvider)
+                          .toggleRSVP(currentUser.uid, session.id, !hasRsvpd);
                     },
                     icon: Icon(
                       hasRsvpd ? Icons.check_circle : Icons.add_alert_rounded,
                       size: 16,
-                      color: hasRsvpd ? AppColors.success : AppColors.textSecondary,
+                      color: hasRsvpd
+                          ? AppColors.success
+                          : AppColors.textSecondary,
                     ),
                     label: Text(
                       hasRsvpd ? 'RSVP\'d (Going)' : 'RSVP',
-                      style: TextStyle(color: hasRsvpd ? AppColors.success : AppColors.textSecondary),
+                      style: TextStyle(
+                        color: hasRsvpd
+                            ? AppColors.success
+                            : AppColors.textSecondary,
+                      ),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
-                        color: hasRsvpd ? AppColors.success.withValues(alpha: 0.5) : AppColors.border,
+                        color: hasRsvpd
+                            ? AppColors.success.withValues(alpha: 0.5)
+                            : AppColors.border,
                       ),
-                      backgroundColor: hasRsvpd ? AppColors.success.withValues(alpha: 0.1) : Colors.transparent,
+                      backgroundColor: hasRsvpd
+                          ? AppColors.success.withValues(alpha: 0.1)
+                          : Colors.transparent,
                     ),
                   ),
                 ),
@@ -454,7 +577,11 @@ class _HackathonsTab extends ConsumerStatefulWidget {
 class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
   String? _selectedHackathonId;
 
-  void _showCreateTeamDialog(BuildContext context, String hackathonId, String myUid) {
+  void _showCreateTeamDialog(
+    BuildContext context,
+    String hackathonId,
+    String myUid,
+  ) {
     final nameController = TextEditingController();
     final skillsController = TextEditingController();
 
@@ -463,13 +590,19 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: AppColors.surface,
-          title: const Text('Create Hackathon Team', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text(
+            'Create Hackathon Team',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'Team Name', hintText: 'e.g. Code Commandos'),
+                decoration: const InputDecoration(
+                  labelText: 'Team Name',
+                  hintText: 'e.g. Code Commandos',
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -484,7 +617,10 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textMuted),
+              ),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -505,7 +641,9 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                   status: 'open',
                 );
 
-                await ref.read(databaseRepositoryProvider).createTeam(hackathonId, team);
+                await ref
+                    .read(databaseRepositoryProvider)
+                    .createTeam(hackathonId, team);
                 if (context.mounted) Navigator.pop(context);
               },
               child: const Text('Create'),
@@ -537,7 +675,9 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
         // Set default selection
         _selectedHackathonId ??= hackathons.first.id;
 
-        final currentHackathon = hackathons.firstWhere((h) => h.id == _selectedHackathonId);
+        final currentHackathon = hackathons.firstWhere(
+          (h) => h.id == _selectedHackathonId,
+        );
         final teamsAsync = ref.watch(teamsProvider(_selectedHackathonId!));
 
         return SingleChildScrollView(
@@ -556,12 +696,19 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.emoji_events_rounded, color: AppColors.accent, size: 24),
+                          const Icon(
+                            Icons.emoji_events_rounded,
+                            color: AppColors.accent,
+                            size: 24,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               currentHackathon.title,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
                         ],
@@ -569,23 +716,41 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                       const SizedBox(height: 8),
                       Text(
                         currentHackathon.description,
-                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                          height: 1.4,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          const Icon(Icons.date_range_rounded, size: 14, color: AppColors.textMuted),
+                          const Icon(
+                            Icons.date_range_rounded,
+                            size: 14,
+                            color: AppColors.textMuted,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'Starts: ${DateFormat('MMM dd, yyyy').format(currentHackathon.startDate)}',
-                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                           const Spacer(),
-                          const Icon(Icons.groups_rounded, size: 14, color: AppColors.textMuted),
+                          const Icon(
+                            Icons.groups_rounded,
+                            size: 14,
+                            color: AppColors.textMuted,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'Max Team Size: ${currentHackathon.teamSizeLimit}',
-                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -604,7 +769,11 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   TextButton.icon(
-                    onPressed: () => _showCreateTeamDialog(context, currentHackathon.id, user.uid),
+                    onPressed: () => _showCreateTeamDialog(
+                      context,
+                      currentHackathon.id,
+                      user.uid,
+                    ),
                     icon: const Icon(Icons.add_circle_outline, size: 18),
                     label: const Text('Create Team'),
                   ),
@@ -621,7 +790,10 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                       child: Center(
                         child: Text(
                           'No teams formed yet. Be the first to create one!',
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     );
@@ -631,7 +803,9 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                     children: teams.map((team) {
                       final isLead = team.leadUid == user.uid;
                       final isMember = team.memberUids.contains(user.uid);
-                      final hasRequested = team.pendingRequests.contains(user.uid);
+                      final hasRequested = team.pendingRequests.contains(
+                        user.uid,
+                      );
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -645,21 +819,33 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                                   Expanded(
                                     child: Text(
                                       team.name,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
                                     ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: team.status == 'open'
-                                          ? AppColors.success.withValues(alpha: 0.15)
-                                          : AppColors.error.withValues(alpha: 0.15),
+                                          ? AppColors.success.withValues(
+                                              alpha: 0.15,
+                                            )
+                                          : AppColors.error.withValues(
+                                              alpha: 0.15,
+                                            ),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       team.status.toUpperCase(),
                                       style: TextStyle(
-                                        color: team.status == 'open' ? AppColors.success : AppColors.error,
+                                        color: team.status == 'open'
+                                            ? AppColors.success
+                                            : AppColors.error,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 9,
                                       ),
@@ -670,25 +856,47 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  const Text('Members: ', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                                  const Text(
+                                    'Members: ',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
                                   Expanded(
                                     child: Consumer(
                                       builder: (context, ref, _) {
-                                        final membersAsync = ref.watch(membersStreamProvider);
+                                        final membersAsync = ref.watch(
+                                          membersStreamProvider,
+                                        );
                                         return membersAsync.when(
                                           data: (allMembers) {
                                             final rosterNames = allMembers
-                                                .where((m) => team.memberUids.contains(m.uid))
+                                                .where(
+                                                  (m) => team.memberUids
+                                                      .contains(m.uid),
+                                                )
                                                 .map((m) => m.name)
                                                 .join(', ');
                                             return Text(
-                                              rosterNames.isEmpty ? 'Loading roster...' : rosterNames,
+                                              rosterNames.isEmpty
+                                                  ? 'Loading roster...'
+                                                  : rosterNames,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: AppColors.textSecondary,
+                                              ),
                                             );
                                           },
-                                          loading: () => const Text('...', style: TextStyle(fontSize: 12)),
-                                          error: (e, s) => const Text('Error loading names', style: TextStyle(fontSize: 12)),
+                                          loading: () => const Text(
+                                            '...',
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                          error: (e, s) => const Text(
+                                            'Error loading names',
+                                            style: TextStyle(fontSize: 12),
+                                          ),
                                         );
                                       },
                                     ),
@@ -700,18 +908,30 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                                 spacing: 6,
                                 runSpacing: 6,
                                 children: team.requiredSkills
-                                    .map((skill) => Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.surfaceLight,
-                                            borderRadius: BorderRadius.circular(6),
-                                            border: Border.all(color: AppColors.border),
+                                    .map(
+                                      (skill) => Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surfaceLight,
+                                          borderRadius: BorderRadius.circular(
+                                            6,
                                           ),
-                                          child: Text(
-                                            skill,
-                                            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                          border: Border.all(
+                                            color: AppColors.border,
                                           ),
-                                        ))
+                                        ),
+                                        child: Text(
+                                          skill,
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    )
                                     .toList(),
                               ),
                               const Divider(height: 24),
@@ -720,59 +940,114 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                                 if (team.pendingRequests.isEmpty)
                                   const Text(
                                     'No pending join requests',
-                                    style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontStyle: FontStyle.italic),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textMuted,
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   )
                                 else ...[
                                   const Text(
                                     'Pending Join Requests:',
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.accent),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.accent,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   Consumer(
                                     builder: (context, ref, _) {
-                                      final membersAsync = ref.watch(membersStreamProvider);
+                                      final membersAsync = ref.watch(
+                                        membersStreamProvider,
+                                      );
                                       return membersAsync.when(
                                         data: (allMembers) {
-                                          final pendingUsers = allMembers.where((m) => team.pendingRequests.contains(m.uid)).toList();
+                                          final pendingUsers = allMembers
+                                              .where(
+                                                (m) => team.pendingRequests
+                                                    .contains(m.uid),
+                                              )
+                                              .toList();
                                           return Column(
                                             children: pendingUsers.map((pUser) {
                                               return Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 4,
+                                                    ),
                                                 child: Row(
                                                   children: [
                                                     CircleAvatar(
                                                       radius: 12,
-                                                      backgroundImage: pUser.photoUrl.isNotEmpty ? NetworkImage(pUser.photoUrl) : null,
-                                                      child: pUser.photoUrl.isEmpty ? const Icon(Icons.person, size: 10) : null,
+                                                      backgroundImage:
+                                                          pUser
+                                                              .photoUrl
+                                                              .isNotEmpty
+                                                          ? NetworkImage(
+                                                              pUser.photoUrl,
+                                                            )
+                                                          : null,
+                                                      child:
+                                                          pUser.photoUrl.isEmpty
+                                                          ? const Icon(
+                                                              Icons.person,
+                                                              size: 10,
+                                                            )
+                                                          : null,
                                                     ),
                                                     const SizedBox(width: 8),
                                                     Expanded(
                                                       child: Text(
                                                         pUser.name,
-                                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
                                                       ),
                                                     ),
                                                     IconButton(
                                                       onPressed: () {
-                                                        ref.read(databaseRepositoryProvider).manageJoinRequest(
-                                                              currentHackathon.id,
+                                                        ref
+                                                            .read(
+                                                              databaseRepositoryProvider,
+                                                            )
+                                                            .manageJoinRequest(
+                                                              currentHackathon
+                                                                  .id,
                                                               team.id,
                                                               pUser.uid,
                                                               true, // approve
                                                             );
                                                       },
-                                                      icon: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+                                                      icon: const Icon(
+                                                        Icons
+                                                            .check_circle_rounded,
+                                                        color:
+                                                            AppColors.success,
+                                                        size: 20,
+                                                      ),
                                                     ),
                                                     IconButton(
                                                       onPressed: () {
-                                                        ref.read(databaseRepositoryProvider).manageJoinRequest(
-                                                              currentHackathon.id,
+                                                        ref
+                                                            .read(
+                                                              databaseRepositoryProvider,
+                                                            )
+                                                            .manageJoinRequest(
+                                                              currentHackathon
+                                                                  .id,
                                                               team.id,
                                                               pUser.uid,
                                                               false, // reject
                                                             );
                                                       },
-                                                      icon: const Icon(Icons.cancel_rounded, color: AppColors.error, size: 20),
+                                                      icon: const Icon(
+                                                        Icons.cancel_rounded,
+                                                        color: AppColors.error,
+                                                        size: 20,
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
@@ -780,8 +1055,11 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                                             }).toList(),
                                           );
                                         },
-                                        loading: () => const LinearProgressIndicator(),
-                                        error: (e, s) => const Text('Error loading requests'),
+                                        loading: () =>
+                                            const LinearProgressIndicator(),
+                                        error: (e, s) => const Text(
+                                          'Error loading requests',
+                                        ),
                                       );
                                     },
                                   ),
@@ -790,29 +1068,44 @@ class _HackathonsTabState extends ConsumerState<_HackathonsTab> {
                                 const Center(
                                   child: Text(
                                     'You are a member of this team 🎉',
-                                    style: TextStyle(fontSize: 12, color: AppColors.success, fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.success,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                )
+                                ),
                               ] else ...[
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(
-                                    onPressed: (hasRequested || team.status == 'full')
+                                    onPressed:
+                                        (hasRequested || team.status == 'full')
                                         ? null
                                         : () {
-                                            ref.read(databaseRepositoryProvider).requestToJoinTeam(
+                                            ref
+                                                .read(
+                                                  databaseRepositoryProvider,
+                                                )
+                                                .requestToJoinTeam(
                                                   currentHackathon.id,
                                                   team.id,
                                                   user.uid,
                                                 );
                                           },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: hasRequested ? AppColors.surfaceLight : AppColors.primary,
+                                      backgroundColor: hasRequested
+                                          ? AppColors.surfaceLight
+                                          : AppColors.primary,
                                     ),
                                     child: Text(
-                                      hasRequested ? 'Join Request Pending' : 'Request to Join',
+                                      hasRequested
+                                          ? 'Join Request Pending'
+                                          : 'Request to Join',
                                       style: TextStyle(
-                                        color: hasRequested ? AppColors.textMuted : Colors.white,
+                                        color: hasRequested
+                                            ? AppColors.textMuted
+                                            : Colors.white,
                                       ),
                                     ),
                                   ),

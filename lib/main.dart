@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
+import 'core/localization/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
 import 'services/service_providers.dart';
 
@@ -48,14 +50,16 @@ void main() async {
   }
 
   // Immersive status bar styling (mobile only)
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF0B0F19),
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
+  if (!kIsWeb) {
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Color(0xFF0B0F19),
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
+  }
 
   runApp(
     ProviderScope(
@@ -75,18 +79,28 @@ class KrivaApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final useMock = ref.watch(useMockModeProvider);
+    final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
       title: 'KRIVA',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       routerConfig: router,
+      locale: locale,
+      supportedLocales: const [Locale('en', ''), Locale('es', '')],
+      localizationsDelegates: const [
+        AppLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
         // Show a banner when running in Mock Mode so it's always obvious
         if (useMock) {
           return Stack(
             children: [
-              child!,
+              child,
               Positioned(
                 top: 0,
                 left: 0,
@@ -98,7 +112,9 @@ class KrivaApp extends ConsumerWidget {
                       child: Container(
                         margin: const EdgeInsets.only(top: 4),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 3),
+                          horizontal: 12,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF59E0B).withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(20),
@@ -119,7 +135,7 @@ class KrivaApp extends ConsumerWidget {
             ],
           );
         }
-        return child!;
+        return child;
       },
     );
   }

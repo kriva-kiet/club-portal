@@ -32,7 +32,9 @@ class SessionModel {
       domainTag: map['domainTag'] ?? 'general',
       dateTime: dt is Timestamp
           ? dt.toDate()
-          : (dt is String ? (DateTime.tryParse(dt) ?? DateTime.now()) : DateTime.now()),
+          : (dt is String
+                ? (DateTime.tryParse(dt) ?? DateTime.now())
+                : DateTime.now()),
       link: map['link'] ?? '',
       createdBy: map['createdBy'] ?? 'Admin',
       rsvps: List<String>.from(map['rsvps'] ?? []),

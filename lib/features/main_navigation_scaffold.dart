@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
+import '../models/user_model.dart';
 import '../services/service_providers.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'roadmap/roadmap_list_screen.dart';
 import 'collaboration/collaboration_screen.dart';
 import 'community/community_screen.dart';
 import 'profile/profile_screen.dart';
+import '../core/localization/app_localizations.dart';
 
 // Provider to manage active navigation tab globally
 final navigationTabProvider = StateProvider<int>((ref) => 0);
@@ -20,9 +22,7 @@ class MainNavigationScaffold extends ConsumerWidget {
     final currentIndex = ref.watch(navigationTabProvider);
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // Modern 5-tab Bottom Navigation (Dashboard, Roadmaps, Collab, Community, Profile)
@@ -34,31 +34,37 @@ class MainNavigationScaffold extends ConsumerWidget {
       const ProfileScreen(),
     ];
 
-    final List<BottomNavigationBarItem> navItems = [
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.dashboard_outlined),
-        activeIcon: Icon(Icons.dashboard_rounded),
-        label: 'Dashboard',
+    // Dynamic labels based on role
+    String firstTabLabel = AppLocalizations.of(context)?.translate('dashboard_title') ?? 'Dashboard';
+    if (user.role == UserRole.lead) firstTabLabel = 'Lead Panel';
+    if (user.role == UserRole.admin) firstTabLabel = 'Admin Panel';
+    if (user.role == UserRole.developer) firstTabLabel = 'Dev Tools';
+
+    final List<NavigationDestination> navDestinations = [
+      NavigationDestination(
+        icon: const Icon(Icons.dashboard_outlined),
+        selectedIcon: const Icon(Icons.dashboard_rounded),
+        label: firstTabLabel,
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.map_outlined),
-        activeIcon: Icon(Icons.map_rounded),
-        label: 'Roadmaps',
+      NavigationDestination(
+        icon: const Icon(Icons.map_outlined),
+        selectedIcon: const Icon(Icons.map_rounded),
+        label: AppLocalizations.of(context)?.translate('roadmaps_title') ?? 'Roadmaps',
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.hub_outlined),
-        activeIcon: Icon(Icons.hub_rounded),
-        label: 'Collab',
+      NavigationDestination(
+        icon: const Icon(Icons.hub_outlined),
+        selectedIcon: const Icon(Icons.hub_rounded),
+        label: AppLocalizations.of(context)?.translate('collab_title') ?? 'Collab',
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.people_outline_rounded),
-        activeIcon: Icon(Icons.people_alt_rounded),
-        label: 'Community',
+      NavigationDestination(
+        icon: const Icon(Icons.people_outline_rounded),
+        selectedIcon: const Icon(Icons.people_alt_rounded),
+        label: AppLocalizations.of(context)?.translate('community_title') ?? 'Community',
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.person_outline),
-        activeIcon: Icon(Icons.person_rounded),
-        label: 'Profile',
+      NavigationDestination(
+        icon: const Icon(Icons.person_outline),
+        selectedIcon: const Icon(Icons.person_rounded),
+        label: AppLocalizations.of(context)?.translate('profile_title') ?? 'Profile',
       ),
     ];
 
@@ -69,29 +75,15 @@ class MainNavigationScaffold extends ConsumerWidget {
     }
 
     return Scaffold(
-      body: IndexedStack(
-        index: activeIndex,
-        children: screens,
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(
-            top: BorderSide(color: AppColors.border, width: 1),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: activeIndex,
-          onTap: (index) {
-            ref.read(navigationTabProvider.notifier).state = index;
-          },
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: AppColors.background.withValues(alpha: 0.95),
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textMuted,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
-          unselectedLabelStyle: const TextStyle(fontSize: 10),
-          items: navItems,
-        ),
+      body: IndexedStack(index: activeIndex, children: screens),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: activeIndex,
+        onDestinationSelected: (index) {
+          ref.read(navigationTabProvider.notifier).state = index;
+        },
+        backgroundColor: AppColors.background.withValues(alpha: 0.95),
+        indicatorColor: AppColors.primary.withValues(alpha: 0.2),
+        destinations: navDestinations,
       ),
     );
   }

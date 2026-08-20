@@ -26,7 +26,8 @@ class GlowingCard extends StatefulWidget {
   State<GlowingCard> createState() => _GlowingCardState();
 }
 
-class _GlowingCardState extends State<GlowingCard> with SingleTickerProviderStateMixin {
+class _GlowingCardState extends State<GlowingCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -38,9 +39,10 @@ class _GlowingCardState extends State<GlowingCard> with SingleTickerProviderStat
       duration: const Duration(seconds: 2),
     );
 
-    _animation = Tween<double>(begin: 0.6, end: 1.2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: 0.6,
+      end: 1.2,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     if (widget.animate) {
       _controller.repeat(reverse: true);
@@ -94,10 +96,7 @@ class _GlowingCardState extends State<GlowingCard> with SingleTickerProviderStat
     );
 
     if (widget.onTap != null) {
-      return GestureDetector(
-        onTap: widget.onTap,
-        child: card,
-      );
+      return GestureDetector(onTap: widget.onTap, child: card);
     }
     return card;
   }

@@ -39,10 +39,10 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
         .orderBy('order')
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return ModuleModel.fromMap(doc.data(), doc.id, domainId);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return ModuleModel.fromMap(doc.data(), doc.id, domainId);
+          }).toList();
+        });
   }
 
   @override
@@ -56,21 +56,19 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
         .orderBy('order')
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return TopicModel.fromMap(doc.data(), doc.id, moduleId);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return TopicModel.fromMap(doc.data(), doc.id, moduleId);
+          }).toList();
+        });
   }
 
   // Progress Tracking
   @override
   Stream<UserProgressModel?> getUserProgress(String uid, String domainId) {
     final docId = '${uid}_$domainId';
-    return _firestore
-        .collection('userProgress')
-        .doc(docId)
-        .snapshots()
-        .map((doc) {
+    return _firestore.collection('userProgress').doc(docId).snapshots().map((
+      doc,
+    ) {
       if (!doc.exists || doc.data() == null) {
         return UserProgressModel(
           uid: uid,
@@ -85,20 +83,20 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
 
   @override
   Future<void> toggleTopicCompletion(
-    String uid, 
-    String domainId, 
-    String topicId, 
+    String uid,
+    String domainId,
+    String topicId,
     bool isCompleted,
     int totalTopicsInDomain,
   ) async {
     final docId = '${uid}_$domainId';
     final docRef = _firestore.collection('userProgress').doc(docId);
-    
+
     await _firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(docRef);
-      
+
       Map<String, dynamic> topicsCompleted = {};
-      
+
       if (snapshot.exists && snapshot.data() != null) {
         final data = snapshot.data()!;
         if (data['topicsCompleted'] is Map) {
@@ -119,7 +117,9 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
           ? (topicsCompleted.length / totalTopicsInDomain)
           : 0.0;
 
-      final double percentComplete = double.parse(computedPercent.toStringAsFixed(2));
+      final double percentComplete = double.parse(
+        computedPercent.toStringAsFixed(2),
+      );
 
       transaction.set(docRef, {
         'uid': uid,
@@ -141,24 +141,27 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
         .limit(50)
         .snapshots()
         .map((snapshot) {
-      final list = snapshot.docs.map((doc) {
-        return BroadcastModel.fromMap(doc.data(), doc.id);
-      }).toList();
-      
-      // Perform memory audience filtering
-      return list.where((bc) {
-        if (bc.audienceType == 'all') return true;
-        if (bc.audienceType == 'batch' && bc.audienceValue == user.batch) return true;
-        if (bc.audienceType == 'domain' && user.domainsFollowing.contains(bc.audienceValue)) return true;
-        return false;
-      }).toList();
-    });
+          final list = snapshot.docs.map((doc) {
+            return BroadcastModel.fromMap(doc.data(), doc.id);
+          }).toList();
+
+          // Perform memory audience filtering
+          return list.where((bc) {
+            if (bc.audienceType == 'all') return true;
+            if (bc.audienceType == 'batch' && bc.audienceValue == user.batch)
+              return true;
+            if (bc.audienceType == 'domain' &&
+                user.domainsFollowing.contains(bc.audienceValue))
+              return true;
+            return false;
+          }).toList();
+        });
   }
 
   @override
   Future<void> markBroadcastAsRead(String uid, String broadcastId) async {
     await _firestore.collection('broadcasts').doc(broadcastId).update({
-      'readBy': FieldValue.arrayUnion([uid])
+      'readBy': FieldValue.arrayUnion([uid]),
     });
   }
 
@@ -184,7 +187,11 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
   }
 
   @override
-  Future<void> createTopic(String domainId, String moduleId, TopicModel topic) async {
+  Future<void> createTopic(
+    String domainId,
+    String moduleId,
+    TopicModel topic,
+  ) async {
     await _firestore
         .collection('domains')
         .doc(domainId)
@@ -213,21 +220,26 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
         .orderBy('dateTime')
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return SessionModel.fromMap(doc.data(), doc.id);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return SessionModel.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
   }
 
   @override
   Future<void> createSession(SessionModel session) async {
-    await _firestore.collection('sessions').doc(session.id).set(session.toMap());
+    await _firestore
+        .collection('sessions')
+        .doc(session.id)
+        .set(session.toMap());
   }
 
   @override
   Future<void> toggleRSVP(String uid, String sessionId, bool rsvp) async {
     await _firestore.collection('sessions').doc(sessionId).update({
-      'rsvps': rsvp ? FieldValue.arrayUnion([uid]) : FieldValue.arrayRemove([uid])
+      'rsvps': rsvp
+          ? FieldValue.arrayUnion([uid])
+          : FieldValue.arrayRemove([uid]),
     });
   }
 
@@ -243,7 +255,10 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
 
   @override
   Future<void> createHackathon(HackathonModel hackathon) async {
-    await _firestore.collection('hackathons').doc(hackathon.id).set(hackathon.toMap());
+    await _firestore
+        .collection('hackathons')
+        .doc(hackathon.id)
+        .set(hackathon.toMap());
   }
 
   @override
@@ -254,10 +269,10 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
         .collection('teams')
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return TeamModel.fromMap(doc.data(), doc.id);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return TeamModel.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
   }
 
   @override
@@ -271,19 +286,28 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
   }
 
   @override
-  Future<void> requestToJoinTeam(String hackathonId, String teamId, String uid) async {
+  Future<void> requestToJoinTeam(
+    String hackathonId,
+    String teamId,
+    String uid,
+  ) async {
     await _firestore
         .collection('hackathons')
         .doc(hackathonId)
         .collection('teams')
         .doc(teamId)
         .update({
-      'pendingRequests': FieldValue.arrayUnion([uid])
-    });
+          'pendingRequests': FieldValue.arrayUnion([uid]),
+        });
   }
 
   @override
-  Future<void> manageJoinRequest(String hackathonId, String teamId, String uid, bool approve) async {
+  Future<void> manageJoinRequest(
+    String hackathonId,
+    String teamId,
+    String uid,
+    bool approve,
+  ) async {
     final docRef = _firestore
         .collection('hackathons')
         .doc(hackathonId)
@@ -295,7 +319,8 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
       if (!snapshot.exists) throw Exception('Team not found');
 
       final team = TeamModel.fromMap(snapshot.data()!, snapshot.id);
-      final updatedPending = List<String>.from(team.pendingRequests)..remove(uid);
+      final updatedPending = List<String>.from(team.pendingRequests)
+        ..remove(uid);
       final updatedMembers = List<String>.from(team.memberUids);
 
       if (approve) {
@@ -315,7 +340,9 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
   // Community Feed & Comments (Phase 3)
   @override
   Stream<List<PostModel>> getPosts(String? tagFilter) {
-    Query query = _firestore.collection('posts').orderBy('createdAt', descending: true);
+    Query query = _firestore
+        .collection('posts')
+        .orderBy('createdAt', descending: true);
     if (tagFilter != null && tagFilter != 'all') {
       query = query.where('tag', isEqualTo: tagFilter);
     }
@@ -357,10 +384,10 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
         .orderBy('createdAt')
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return CommentModel.fromMap(doc.data(), doc.id);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return CommentModel.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
   }
 
   @override
@@ -393,10 +420,10 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
         .orderBy('sentAt')
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return MessageModel.fromMap(doc.data(), doc.id);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return MessageModel.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
   }
 
   @override
@@ -411,9 +438,7 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
 
   @override
   Future<void> updateUserRole(String uid, UserRole role) async {
-    await _firestore.collection('users').doc(uid).update({
-      'role': role.value
-    });
+    await _firestore.collection('users').doc(uid).update({'role': role.value});
   }
 
   @override
@@ -431,10 +456,10 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
         .orderBy('requestedAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return AccessRequestModel.fromMap(doc.data(), doc.id);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return AccessRequestModel.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
   }
 
   @override
@@ -446,7 +471,20 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
   }
 
   @override
-  Future<void> approveAccessRequest(String requestId, String email, String password) async {
+  Future<void> approveAccessRequest(
+    String requestId,
+    String email,
+    String password,
+  ) async {
+    final doc = await _firestore
+        .collection('access_requests')
+        .doc(requestId)
+        .get();
+    final data = doc.data();
+    final name = data?['name'] ?? 'Admitted Student';
+    final requestedRole = data?['requestedRole'] ?? 'member';
+    final List domainInterest = data?['domainInterest'] ?? [];
+
     await _firestore.collection('access_requests').doc(requestId).update({
       'status': 'approved',
     });
@@ -455,13 +493,13 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
     final uid = 'user_${cleanId.toLowerCase()}';
     await _firestore.collection('users').doc(uid).set({
       'clubId': cleanId,
-      'name': 'Admitted Student',
+      'name': name,
       'email': email,
-      'photoUrl': 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admitted',
-      'role': 'member',
+      'photoUrl': 'https://api.dicebear.com/7.x/avataaars/png?seed=$name',
+      'role': requestedRole,
       'batch': 'Batch of 2027',
       'bio': 'Admitted via Access Request form.',
-      'domainsFollowing': [],
+      'domainsFollowing': domainInterest,
       'streak': {'count': 0, 'lastActiveDate': null},
       'createdAt': Timestamp.now(),
     });

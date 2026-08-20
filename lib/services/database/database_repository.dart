@@ -14,17 +14,17 @@ abstract class DatabaseRepository {
   Future<DomainModel> getDomainById(String domainId);
   Stream<List<ModuleModel>> getModules(String domainId);
   Stream<List<TopicModel>> getTopics(String domainId, String moduleId);
-  
+
   // Progress Tracking
   Stream<UserProgressModel?> getUserProgress(String uid, String domainId);
   Future<void> toggleTopicCompletion(
-    String uid, 
-    String domainId, 
-    String topicId, 
+    String uid,
+    String domainId,
+    String topicId,
     bool isCompleted,
     int totalTopicsInDomain,
   );
-  
+
   // Broadcasts
   Stream<List<BroadcastModel>> getBroadcasts(UserModel user);
   Future<void> markBroadcastAsRead(String uid, String broadcastId);
@@ -41,7 +41,12 @@ abstract class DatabaseRepository {
   Stream<List<TeamModel>> getTeams(String hackathonId);
   Future<void> createTeam(String hackathonId, TeamModel team);
   Future<void> requestToJoinTeam(String hackathonId, String teamId, String uid);
-  Future<void> manageJoinRequest(String hackathonId, String teamId, String uid, bool approve);
+  Future<void> manageJoinRequest(
+    String hackathonId,
+    String teamId,
+    String uid,
+    bool approve,
+  );
 
   // Community Feed & Comments (Phase 3)
   Stream<List<PostModel>> getPosts(String? tagFilter);
@@ -66,7 +71,11 @@ abstract class DatabaseRepository {
   // Admissions & Password resets (Phase 4 completion)
   Stream<List<AccessRequestModel>> getAccessRequests();
   Future<void> submitAccessRequest(AccessRequestModel request);
-  Future<void> approveAccessRequest(String requestId, String email, String password);
+  Future<void> approveAccessRequest(
+    String requestId,
+    String email,
+    String password,
+  );
   Future<void> rejectAccessRequest(String requestId);
   Future<void> changeUserPassword(String uid, String newPassword);
 }

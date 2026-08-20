@@ -18,7 +18,10 @@ class FirebaseAuthRepository implements AuthRepository {
         return null;
       }
       try {
-        final doc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+        final doc = await _firestore
+            .collection('users')
+            .doc(firebaseUser.uid)
+            .get();
         if (doc.exists && doc.data() != null) {
           _cachedUser = UserModel.fromMap(doc.data()!, firebaseUser.uid);
         } else {
@@ -50,7 +53,7 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<UserModel> signIn(String loginId, String password) async {
     String email = loginId.trim();
-    
+
     // Support Club ID login (convert e.g. MEM001 to mem001@kriva.app)
     if (!email.contains('@')) {
       email = '${email.toLowerCase()}@kriva.app';
@@ -62,9 +65,12 @@ class FirebaseAuthRepository implements AuthRepository {
     );
 
     final firebaseUser = credential.user!;
-    
+
     // Fetch Firestore Profile
-    final doc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+    final doc = await _firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get();
     if (doc.exists && doc.data() != null) {
       _cachedUser = UserModel.fromMap(doc.data()!, firebaseUser.uid);
     } else {
@@ -82,7 +88,10 @@ class FirebaseAuthRepository implements AuthRepository {
         streak: UserStreak(count: 0, lastActiveDate: null),
         createdAt: DateTime.now(),
       );
-      await _firestore.collection('users').doc(firebaseUser.uid).set(_cachedUser!.toMap());
+      await _firestore
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .set(_cachedUser!.toMap());
     }
 
     return _cachedUser!;
@@ -91,8 +100,8 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<UserModel> signInWithGoogle() async {
     // google_sign_in v7 uses a singleton instance and authenticate()
-    final GoogleSignInAccount googleUser =
-        await GoogleSignIn.instance.authenticate();
+    final GoogleSignInAccount googleUser = await GoogleSignIn.instance
+        .authenticate();
 
     // idToken is available directly on GoogleSignInAuthentication
     final GoogleSignInAuthentication googleAuth = googleUser.authentication;
@@ -104,7 +113,10 @@ class FirebaseAuthRepository implements AuthRepository {
     final firebaseUser = userCredential.user!;
 
     // Fetch Firestore Profile
-    final doc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+    final doc = await _firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get();
     if (doc.exists && doc.data() != null) {
       _cachedUser = UserModel.fromMap(doc.data()!, firebaseUser.uid);
     } else {
@@ -122,7 +134,10 @@ class FirebaseAuthRepository implements AuthRepository {
         streak: UserStreak(count: 0, lastActiveDate: null),
         createdAt: DateTime.now(),
       );
-      await _firestore.collection('users').doc(firebaseUser.uid).set(_cachedUser!.toMap());
+      await _firestore
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .set(_cachedUser!.toMap());
     }
 
     return _cachedUser!;

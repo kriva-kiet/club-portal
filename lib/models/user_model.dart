@@ -20,17 +20,14 @@ class UserStreak {
   final int count;
   final DateTime? lastActiveDate;
 
-  UserStreak({
-    required this.count,
-    this.lastActiveDate,
-  });
+  UserStreak({required this.count, this.lastActiveDate});
 
   factory UserStreak.fromMap(Map<String, dynamic> map) {
     final lastActive = map['lastActiveDate'];
     return UserStreak(
       count: map['count'] ?? 0,
-      lastActiveDate: lastActive is Timestamp 
-          ? lastActive.toDate() 
+      lastActiveDate: lastActive is Timestamp
+          ? lastActive.toDate()
           : (lastActive is String ? DateTime.tryParse(lastActive) : null),
     );
   }
@@ -38,16 +35,13 @@ class UserStreak {
   Map<String, dynamic> toMap() {
     return {
       'count': count,
-      'lastActiveDate': lastActiveDate != null 
-          ? Timestamp.fromDate(lastActiveDate!) 
+      'lastActiveDate': lastActiveDate != null
+          ? Timestamp.fromDate(lastActiveDate!)
           : null,
     };
   }
 
-  UserStreak copyWith({
-    int? count,
-    DateTime? lastActiveDate,
-  }) {
+  UserStreak copyWith({int? count, DateTime? lastActiveDate}) {
     return UserStreak(
       count: count ?? this.count,
       lastActiveDate: lastActiveDate ?? this.lastActiveDate,
@@ -94,12 +88,14 @@ class UserModel {
       batch: map['batch'] ?? '',
       bio: map['bio'] ?? '',
       domainsFollowing: List<String>.from(map['domainsFollowing'] ?? []),
-      streak: UserStreak.fromMap(map['streak'] is Map 
-          ? Map<String, dynamic>.from(map['streak']) 
-          : {}),
-      createdAt: created is Timestamp 
-          ? created.toDate() 
-          : (created is String ? (DateTime.tryParse(created) ?? DateTime.now()) : DateTime.now()),
+      streak: UserStreak.fromMap(
+        map['streak'] is Map ? Map<String, dynamic>.from(map['streak']) : {},
+      ),
+      createdAt: created is Timestamp
+          ? created.toDate()
+          : (created is String
+                ? (DateTime.tryParse(created) ?? DateTime.now())
+                : DateTime.now()),
     );
   }
 

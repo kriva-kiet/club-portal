@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth/auth_repository.dart';
@@ -34,9 +35,29 @@ class MockModeNotifier extends StateNotifier<bool> {
   }
 }
 
-final useMockModeProvider = StateNotifierProvider<MockModeNotifier, bool>((ref) {
+final useMockModeProvider = StateNotifierProvider<MockModeNotifier, bool>((
+  ref,
+) {
   final prefs = ref.watch(sharedPreferencesProvider);
   return MockModeNotifier(prefs);
+});
+
+// Notifier to manage and update Locale
+class LocaleNotifier extends StateNotifier<Locale> {
+  final SharedPreferences _prefs;
+  static const _key = 'app_locale_code';
+
+  LocaleNotifier(this._prefs) : super(Locale(_prefs.getString(_key) ?? 'en'));
+
+  Future<void> setLocale(String languageCode) async {
+    state = Locale(languageCode);
+    await _prefs.setString(_key, languageCode);
+  }
+}
+
+final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return LocaleNotifier(prefs);
 });
 
 // Singletons for Mock repositories to maintain state in-memory during execution
@@ -78,7 +99,7 @@ final authStateChangesProvider = StreamProvider<UserModel?>((ref) {
 final currentUserProvider = Provider<UserModel?>((ref) {
   final authState = ref.watch(authStateChangesProvider);
   final prefs = ref.read(sharedPreferencesProvider);
-  
+
   final user = authState.valueOrNull;
   if (user != null) {
     // Save to Cache
@@ -106,10 +127,13 @@ final domainsProvider = StreamProvider<List<DomainModel>>((ref) {
 });
 
 // Stream of progress for a specific domain
-final userProgressProvider = StreamProvider.family<UserProgressModel?, String>((ref, domainId) {
+final userProgressProvider = StreamProvider.family<UserProgressModel?, String>((
+  ref,
+  domainId,
+) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return const Stream.empty();
-  
+
   final dbRepo = ref.watch(databaseRepositoryProvider);
   return dbRepo.getUserProgress(user.uid, domainId);
 });
@@ -118,7 +142,7 @@ final userProgressProvider = StreamProvider.family<UserProgressModel?, String>((
 final broadcastsProvider = StreamProvider<List<BroadcastModel>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return const Stream.empty();
-  
+
   final dbRepo = ref.watch(databaseRepositoryProvider);
   return dbRepo.getBroadcasts(user);
 });
@@ -136,19 +160,28 @@ final hackathonsProvider = StreamProvider<List<HackathonModel>>((ref) {
 });
 
 // Teams Stream Provider
-final teamsProvider = StreamProvider.family<List<TeamModel>, String>((ref, hackathonId) {
+final teamsProvider = StreamProvider.family<List<TeamModel>, String>((
+  ref,
+  hackathonId,
+) {
   final dbRepo = ref.watch(databaseRepositoryProvider);
   return dbRepo.getTeams(hackathonId);
 });
 
 // Social Posts Stream Provider
-final postsProvider = StreamProvider.family<List<PostModel>, String?>((ref, tagFilter) {
+final postsProvider = StreamProvider.family<List<PostModel>, String?>((
+  ref,
+  tagFilter,
+) {
   final dbRepo = ref.watch(databaseRepositoryProvider);
   return dbRepo.getPosts(tagFilter);
 });
 
 // Comments Stream Provider
-final commentsProvider = StreamProvider.family<List<CommentModel>, String>((ref, postId) {
+final commentsProvider = StreamProvider.family<List<CommentModel>, String>((
+  ref,
+  postId,
+) {
   final dbRepo = ref.watch(databaseRepositoryProvider);
   return dbRepo.getComments(postId);
 });
@@ -162,7 +195,10 @@ final channelsProvider = StreamProvider<List<ChatChannelModel>>((ref) {
 });
 
 // Messages Stream Provider
-final messagesProvider = StreamProvider.family<List<MessageModel>, String>((ref, channelId) {
+final messagesProvider = StreamProvider.family<List<MessageModel>, String>((
+  ref,
+  channelId,
+) {
   final dbRepo = ref.watch(databaseRepositoryProvider);
   return dbRepo.getMessages(channelId);
 });

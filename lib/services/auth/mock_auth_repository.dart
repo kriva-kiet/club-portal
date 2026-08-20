@@ -13,12 +13,15 @@ class MockAuthRepository implements AuthRepository {
       clubId: 'MEM001',
       name: 'Abhisht Singh',
       email: 'mem001@kriva.app',
-      photoUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Abhisht',
+      photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=Abhisht',
       role: UserRole.member,
       batch: 'Batch of 2026',
       bio: 'Flutter enthusiast & competitive programmer. Building cool stuff!',
       domainsFollowing: ['dsa', 'web_dev'],
-      streak: UserStreak(count: 7, lastActiveDate: DateTime.now().subtract(const Duration(hours: 4))),
+      streak: UserStreak(
+        count: 7,
+        lastActiveDate: DateTime.now().subtract(const Duration(hours: 4)),
+      ),
       createdAt: DateTime.now().subtract(const Duration(days: 30)),
     ),
     'LED001': UserModel(
@@ -26,10 +29,11 @@ class MockAuthRepository implements AuthRepository {
       clubId: 'LED001',
       name: 'Elena Rostova',
       email: 'led001@kriva.app',
-      photoUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elena',
+      photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=Elena',
       role: UserRole.lead,
       batch: 'Batch of 2025',
-      bio: 'Domain Lead for Data Structures & Algorithms. Ask me anything about graphs!',
+      bio:
+          'Domain Lead for Data Structures & Algorithms. Ask me anything about graphs!',
       domainsFollowing: ['dsa'],
       streak: UserStreak(count: 24, lastActiveDate: DateTime.now()),
       createdAt: DateTime.now().subtract(const Duration(days: 60)),
@@ -39,7 +43,7 @@ class MockAuthRepository implements AuthRepository {
       clubId: 'ADM001',
       name: 'Club President',
       email: 'adm001@kriva.app',
-      photoUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=President',
+      photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=President',
       role: UserRole.admin,
       batch: 'Batch of 2024',
       bio: 'Core Organizer. Managing sessions, roadmaps, and broadcasts.',
@@ -52,7 +56,7 @@ class MockAuthRepository implements AuthRepository {
       clubId: 'DEV001',
       name: 'Master Developer',
       email: 'dev001@kriva.app',
-      photoUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Developer',
+      photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=Developer',
       role: UserRole.developer,
       batch: 'Batch of 2026',
       bio: 'Absolute System Developer override. Master privileges enabled.',
@@ -102,13 +106,15 @@ class MockAuthRepository implements AuthRepository {
       if (actualPassword != password) {
         throw Exception('Incorrect password for account $loginId');
       }
-      
+
       final user = _mockUsers[lookupId]!;
       _currentUser = user;
       _controller.add(_currentUser);
       return _currentUser!;
     } else {
-      throw Exception('Account ID "$loginId" is not admitted in the system. Please submit an Access Request.');
+      throw Exception(
+        'Account ID "$loginId" is not admitted in the system. Please submit an Access Request.',
+      );
     }
   }
 
@@ -120,7 +126,7 @@ class MockAuthRepository implements AuthRepository {
       clubId: 'GGL999',
       name: 'Google User',
       email: 'user@gmail.com',
-      photoUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Google',
+      photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=Google',
       role: UserRole.member,
       batch: 'Batch of 2026',
       bio: 'Logged in with Google.',
@@ -154,7 +160,7 @@ class MockAuthRepository implements AuthRepository {
   }) async {
     await Future.delayed(const Duration(milliseconds: 800));
     if (_currentUser == null) throw Exception('No user logged in');
-    
+
     _currentUser = _currentUser!.copyWith(
       name: name,
       bio: bio,
@@ -162,12 +168,12 @@ class MockAuthRepository implements AuthRepository {
       domainsFollowing: domains,
       photoUrl: photoUrl.isNotEmpty ? photoUrl : _currentUser!.photoUrl,
     );
-    
+
     // Update the seed map as well so logging back in retains changes in this run
     if (_mockUsers.containsKey(_currentUser!.clubId)) {
       _mockUsers[_currentUser!.clubId] = _currentUser!;
     }
-    
+
     _controller.add(_currentUser);
     return _currentUser!;
   }
