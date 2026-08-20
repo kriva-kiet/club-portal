@@ -19,13 +19,26 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = ref.read(currentUserProvider);
+    final isAdminOrDev =
+        user?.role == UserRole.admin || user?.role == UserRole.developer;
+    final tabsCount = isAdminOrDev ? 5 : 4;
+    if (_tabController.length != tabsCount) {
+      _tabController.dispose();
+      _tabController = TabController(length: tabsCount, vsync: this);
+    }
   }
 
   @override
@@ -37,14 +50,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final isAdminOrDev =
+    final bool isAdminOrDev =
         user?.role == UserRole.admin || user?.role == UserRole.developer;
-    final tabsCount = isAdminOrDev ? 5 : 4;
-
-    if (_tabController.length != tabsCount) {
-      _tabController.dispose();
-      _tabController = TabController(length: tabsCount, vsync: this);
-    }
 
     return Scaffold(
       body: SafeArea(
