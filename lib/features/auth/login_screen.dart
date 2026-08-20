@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/access_request_model.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/service_providers.dart';
 import '../../core/localization/app_localizations.dart';
 
@@ -125,6 +127,73 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     } catch (e) {
       setState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _provisionTestAccounts() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = 'Provisioning accounts... Please wait.';
+    });
+
+    final accounts = [
+      {'email': 'member@kriva.app', 'role': 'member', 'id': 'MEM001', 'name': 'Test Member'},
+      {'email': 'lead@kriva.app', 'role': 'lead', 'id': 'LED001', 'name': 'Test Lead'},
+      {'email': 'admin@kriva.app', 'role': 'admin', 'id': 'ADM001', 'name': 'Test Admin'},
+      {'email': 'dev@kriva.app', 'role': 'developer', 'id': 'DEV001', 'name': 'Test Developer'},
+    ];
+
+    try {
+      final auth = FirebaseAuth.instance;
+      final firestore = FirebaseFirestore.instance;
+
+      for (var acc in accounts) {
+        UserCredential cred;
+        try {
+          cred = await auth.createUserWithEmailAndPassword(
+            email: acc['email']!,
+            password: 'password',
+          );
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'email-already-in-use') {
+            cred = await auth.signInWithEmailAndPassword(
+              email: acc['email']!,
+              password: 'password',
+            );
+          } else {
+            rethrow;
+          }
+        }
+
+        final uid = cred.user!.uid;
+        await firestore.collection('users').doc(uid).set({
+          'uid': uid,
+          'clubId': acc['id'],
+          'name': acc['name'],
+          'email': acc['email'],
+          'photoUrl': 'https://api.dicebear.com/7.x/avataaars/png?seed=${acc['name']}',
+          'role': acc['role'],
+          'batch': 'Batch of 2026',
+          'bio': 'Test account provisioned automatically.',
+          'domainsFollowing': acc['role'] == 'lead' ? ['dsa'] : [],
+          'streak': {'count': 0, 'lastActiveDate': null},
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+      }
+      
+      await auth.signOut(); // Sign out the last created account
+      
+      setState(() {
+        _errorMessage = '✅ All 4 test accounts created successfully! You can now log in.';
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to provision: $e';
       });
     } finally {
       if (mounted) {
@@ -728,7 +797,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             ),
                           ),
                         const SizedBox(height: 16),
-
+                        
+                        // Temporary script button to create Live accounts
+                        if (!useMock)
+                          TextButton(
+                            onPressed: _provisionTestAccounts,
+                            style: TextButton.styleFrom(
+                              foregroundColor: config.accent,
+                            ),
+                            child: const Text(
+                              '🛠 Provision Live Test Accounts (Run Once)',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        const SizedBox(height: 24),
                         // ── Request Admission ──────────────────────────────
                         if (!_isLoading)
                           Center(
