@@ -8,39 +8,10 @@ class MockAuthRepository implements AuthRepository {
 
   // ── Seed Users ─────────────────────────────────────────────────────────────
   static final Map<String, UserModel> _mockUsers = {
-    'MEM001': UserModel(
-      uid: 'user_mem001',
-      clubId: 'MEM001',
-      name: 'Abhisht Singh',
-      email: 'member@kriva.app',
-      photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=Abhisht',
-      role: UserRole.member,
-      batch: 'Batch of 2026',
-      bio: 'Flutter enthusiast & competitive programmer. Building cool stuff!',
-      domainsFollowing: ['dsa', 'web_dev'],
-      streak: UserStreak(
-        count: 7,
-        lastActiveDate: DateTime.now().subtract(const Duration(hours: 4)),
-      ),
-      createdAt: DateTime.now().subtract(const Duration(days: 30)),
-    ),
-    'LED001': UserModel(
-      uid: 'user_led001',
-      clubId: 'LED001',
-      name: 'Elena Rostova',
-      email: 'lead@kriva.app',
-      photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=Elena',
-      role: UserRole.lead,
-      batch: 'Batch of 2025',
-      bio: 'Domain Lead for Data Structures & Algorithms. Ask me anything about graphs!',
-      domainsFollowing: ['dsa'],
-      streak: UserStreak(count: 24, lastActiveDate: DateTime.now()),
-      createdAt: DateTime.now().subtract(const Duration(days: 60)),
-    ),
     'ADM001': UserModel(
       uid: 'user_adm001',
       clubId: 'ADM001',
-      name: 'Club President',
+      name: 'System Admin',
       email: 'admin@kriva.app',
       photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=President',
       role: UserRole.admin,
@@ -50,42 +21,17 @@ class MockAuthRepository implements AuthRepository {
       streak: UserStreak(count: 0, lastActiveDate: null),
       createdAt: DateTime.now().subtract(const Duration(days: 90)),
     ),
-    'DEV001': UserModel(
-      uid: 'user_dev001',
-      clubId: 'DEV001',
-      name: 'Abhisht Singh (Dev)',
-      email: 'dev@kriva.app',
-      photoUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=Developer',
-      role: UserRole.developer,
-      batch: 'Batch of 2026',
-      bio: 'App Developer. Master privileges enabled.',
-      domainsFollowing: ['dsa', 'web_dev', 'ml'],
-      streak: UserStreak(count: 99, lastActiveDate: DateTime.now()),
-      createdAt: DateTime.now().subtract(const Duration(days: 120)),
-    ),
   };
 
   // ── Passwords (keyed by UPPERCASE club ID) ─────────────────────────────────
   static final Map<String, String> _mockPasswords = {
-    'MEM001': 'password',
-    'LED001': 'password',
     'ADM001': 'password',
-    'DEV001': 'password',
   };
 
   // ── Email → Club ID lookup ─────────────────────────────────────────────────
-  // Supports both shorthand (member@kriva.app) and full-format (mem001@kriva.app)
   static final Map<String, String> _emailToClubId = {
-    // Shorthand emails
-    'member@kriva.app': 'MEM001',
-    'lead@kriva.app':   'LED001',
     'admin@kriva.app':  'ADM001',
-    'dev@kriva.app':    'DEV001',
-    // Full-format emails
-    'mem001@kriva.app': 'MEM001',
-    'led001@kriva.app': 'LED001',
     'adm001@kriva.app': 'ADM001',
-    'dev001@kriva.app': 'DEV001',
   };
 
   // Public getters to allow MockDatabaseRepository to add users on approval
