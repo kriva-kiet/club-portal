@@ -57,14 +57,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // If user is on the wrong portal for their role, redirect to correct one
-      final portals = ['/', '/lead', '/admin'];
-      for (final portal in portals) {
-        if (loc.startsWith(portal) && portal != homeRoute) {
-          // Only redirect if they're at the root of a wrong portal
-          // Allow /roadmap/:id for all roles
-          if (!loc.startsWith('/roadmap')) {
-            return homeRoute;
-          }
+      final isMemberPortal = loc == '/' || (loc.startsWith('/') && !loc.startsWith('/lead') && !loc.startsWith('/admin') && !loc.startsWith('/roadmap'));
+      final isLeadPortal = loc.startsWith('/lead');
+      final isAdminPortal = loc.startsWith('/admin');
+
+      if (!loc.startsWith('/roadmap')) {
+        if (homeRoute == '/') {
+          if (isLeadPortal || isAdminPortal) return homeRoute;
+        } else if (homeRoute == '/lead') {
+          if (isMemberPortal || isAdminPortal) return homeRoute;
+        } else if (homeRoute == '/admin') {
+          if (isMemberPortal || isLeadPortal) return homeRoute;
         }
       }
 
