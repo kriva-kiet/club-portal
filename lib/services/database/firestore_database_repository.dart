@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/domain_model.dart';
 import '../../models/user_progress_model.dart';
 import '../../models/broadcast_model.dart';
@@ -490,19 +492,39 @@ class FirestoreDatabaseRepository implements DatabaseRepository {
     });
 
     final cleanId = email.split('@')[0].toUpperCase();
-    final uid = 'user_${cleanId.toLowerCase()}';
-    await _firestore.collection('users').doc(uid).set({
-      'clubId': cleanId,
-      'name': name,
-      'email': email,
-      'photoUrl': 'https://api.dicebear.com/7.x/avataaars/png?seed=$name',
-      'role': requestedRole,
-      'batch': 'Batch of 2027',
-      'bio': 'Admitted via Access Request form.',
-      'domainsFollowing': domainInterest,
-      'streak': {'count': 0, 'lastActiveDate': null},
-      'createdAt': Timestamp.now(),
-    });
+    
+    // Create actual Firebase Auth User using a secondary app instance
+    // This prevents the Admin from being signed out
+    final tempApp = await Firebase.initializeApp(
+      name: 'TemporaryAuthApp_${DateTime.now().millisecondsSinceEpoch}',
+      options: Firebase.app().options,
+    );
+    
+    try {
+      final tempAuth = FirebaseAuth.instanceFor(app: tempApp);
+      final userCred = await tempAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      final uid = userCred.user!.uid;
+      
+      await _firestore.collection('users').doc(uid).set({
+        'uid': uid,
+        'clubId': cleanId,
+        'name': name,
+        'email': email,
+        'photoUrl': 'https://api.dicebear.com/7.x/avataaars/png?seed=$name',
+        'role': requestedRole,
+        'batch': 'Batch of 2027',
+        'bio': 'Admitted via Access Request form.',
+        'domainsFollowing': domainInterest,
+        'streak': {'count': 0, 'lastActiveDate': null},
+        'createdAt': Timestamp.now(),
+      });
+    } finally {
+      await tempApp.delete();
+    }
   }
 
   @override
