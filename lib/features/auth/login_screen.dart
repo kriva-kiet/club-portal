@@ -125,9 +125,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       );
       // GoRouter redirect triggers and routes to the correct role portal
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

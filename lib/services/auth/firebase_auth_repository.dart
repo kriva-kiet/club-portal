@@ -10,6 +10,12 @@ class FirebaseAuthRepository implements AuthRepository {
 
   UserModel? _cachedUser;
 
+  /// Determines the correct role for an email address
+  static UserRole _roleForEmail(String? email) {
+    if (email == 'admin@kriva.app') return UserRole.admin;
+    return UserRole.member;
+  }
+
   @override
   Stream<UserModel?> get authStateChanges {
     return _firebaseAuth.authStateChanges().asyncMap((firebaseUser) async {
@@ -17,6 +23,14 @@ class FirebaseAuthRepository implements AuthRepository {
         _cachedUser = null;
         return null;
       }
+
+      // If we already have a cached user for this uid, return it immediately
+      // This prevents the race condition where authStateChanges fires
+      // before signIn has finished setting up the user
+      if (_cachedUser != null && _cachedUser!.uid == firebaseUser.uid) {
+        return _cachedUser;
+      }
+
       try {
         final doc = await _firestore
             .collection('users')
@@ -32,7 +46,7 @@ class FirebaseAuthRepository implements AuthRepository {
             name: firebaseUser.displayName ?? '',
             email: firebaseUser.email ?? '',
             photoUrl: firebaseUser.photoURL ?? '',
-            role: firebaseUser.email == 'admin@kriva.app' ? UserRole.admin : UserRole.member,
+            role: _roleForEmail(firebaseUser.email),
             batch: '',
             bio: '',
             domainsFollowing: [],
@@ -42,7 +56,23 @@ class FirebaseAuthRepository implements AuthRepository {
         }
         return _cachedUser;
       } catch (e) {
-        return null;
+        // Firestore permission denied or network error — 
+        // Still return a shell user so the router can redirect correctly
+        // instead of returning null (which makes router think user is signed out)
+        _cachedUser = UserModel(
+          uid: firebaseUser.uid,
+          clubId: '',
+          name: firebaseUser.displayName ?? '',
+          email: firebaseUser.email ?? '',
+          photoUrl: firebaseUser.photoURL ?? '',
+          role: _roleForEmail(firebaseUser.email),
+          batch: '',
+          bio: '',
+          domainsFollowing: [],
+          streak: UserStreak(count: 0, lastActiveDate: null),
+          createdAt: DateTime.now(),
+        );
+        return _cachedUser;
       }
     });
   }
@@ -54,7 +84,7 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<UserModel> signIn(String loginId, String password) async {
     String email = loginId.trim();
 
-    // Support Club ID login (convert e.g. MEM001 to mem001@kriva.app)
+    // Support Club ID login (convert e.g. ADM001 to adm001@kriva.app)
     if (!email.contains('@')) {
       email = '${email.toLowerCase()}@kriva.app';
     }
@@ -66,32 +96,43 @@ class FirebaseAuthRepository implements AuthRepository {
 
     final firebaseUser = credential.user!;
 
-    // Fetch Firestore Profile
-    final doc = await _firestore
-        .collection('users')
-        .doc(firebaseUser.uid)
-        .get();
-    if (doc.exists && doc.data() != null) {
-      _cachedUser = UserModel.fromMap(doc.data()!, firebaseUser.uid);
-    } else {
-      // Create initial shell user
-      _cachedUser = UserModel(
-        uid: firebaseUser.uid,
-        clubId: loginId.contains('@') ? '' : loginId.toUpperCase(),
-        name: '',
-        email: email,
-        photoUrl: '',
-        role: email == 'admin@kriva.app' ? UserRole.admin : UserRole.member,
-        batch: '',
-        bio: '',
-        domainsFollowing: [],
-        streak: UserStreak(count: 0, lastActiveDate: null),
-        createdAt: DateTime.now(),
-      );
-      await _firestore
+    // Set _cachedUser BEFORE Firestore read so the authStateChanges
+    // stream (which fires immediately on sign-in) finds it already set
+    _cachedUser = UserModel(
+      uid: firebaseUser.uid,
+      clubId: loginId.contains('@') ? '' : loginId.toUpperCase(),
+      name: '',
+      email: email,
+      photoUrl: '',
+      role: _roleForEmail(email),
+      batch: '',
+      bio: '',
+      domainsFollowing: [],
+      streak: UserStreak(count: 0, lastActiveDate: null),
+      createdAt: DateTime.now(),
+    );
+
+    // Now try to enrich from Firestore (may fail if rules aren't set)
+    try {
+      final doc = await _firestore
           .collection('users')
           .doc(firebaseUser.uid)
-          .set(_cachedUser!.toMap());
+          .get();
+      if (doc.exists && doc.data() != null) {
+        _cachedUser = UserModel.fromMap(doc.data()!, firebaseUser.uid);
+      } else {
+        // Write shell user to Firestore
+        try {
+          await _firestore
+              .collection('users')
+              .doc(firebaseUser.uid)
+              .set(_cachedUser!.toMap());
+        } catch (_) {
+          // Firestore write failed (permission-denied) — continue with cached user
+        }
+      }
+    } catch (_) {
+      // Firestore read failed — continue with the shell user we already set
     }
 
     return _cachedUser!;
