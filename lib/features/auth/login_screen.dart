@@ -1,15 +1,26 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../web/auth/web_login_screen.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/access_request_model.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/user_model.dart';
 import '../../services/service_providers.dart';
-import '../../core/localization/app_localizations.dart';
 
 // ── Portal definitions ─────────────────────────────────────────────────────────
 enum _PortalType { member, lead, admin }
+
+UserRole _roleForPortal(_PortalType portal) {
+  switch (portal) {
+    case _PortalType.member:
+      return UserRole.member;
+    case _PortalType.lead:
+      return UserRole.lead;
+    case _PortalType.admin:
+      return UserRole.admin;
+  }
+}
 
 class _PortalConfig {
   final String label;
@@ -19,7 +30,6 @@ class _PortalConfig {
   final Color accent;
   final Color cardGradientStart;
   final Color cardGradientEnd;
-  final String mockHint;
 
   const _PortalConfig({
     required this.label,
@@ -29,7 +39,6 @@ class _PortalConfig {
     required this.accent,
     required this.cardGradientStart,
     required this.cardGradientEnd,
-    required this.mockHint,
   });
 }
 
@@ -37,36 +46,35 @@ const _portals = {
   _PortalType.member: _PortalConfig(
     label: 'Member',
     subtitle: 'Student Portal',
-    hint: 'e.g. MEM001 or member@kriva.app',
+    hint: 'Enter your Member Club ID or email',
     icon: Icons.person_rounded,
     accent: Color(0xFF6366F1),
     cardGradientStart: Color(0xFF1E1B4B),
     cardGradientEnd: Color(0xFF312E81),
-    mockHint: '💡 member@kriva.app  or  MEM001\nPassword: password',
   ),
   _PortalType.lead: _PortalConfig(
-    label: 'Lead / Mentor',
+    label: 'Lead',
     subtitle: 'Educator Portal',
-    hint: 'e.g. LED001 or lead@kriva.app',
+    hint: 'Enter your Lead Club ID or email',
     icon: Icons.star_rounded,
     accent: Color(0xFF10B981),
     cardGradientStart: Color(0xFF064E3B),
     cardGradientEnd: Color(0xFF065F46),
-    mockHint: '💡 lead@kriva.app  or  LED001\nPassword: password',
   ),
   _PortalType.admin: _PortalConfig(
-    label: 'Admin / Dev',
+    label: 'Admin',
     subtitle: 'Admin Control Center',
-    hint: 'e.g. ADM001, DEV001 or admin@kriva.app',
+    hint: 'Enter your Admin Club ID',
     icon: Icons.admin_panel_settings_rounded,
     accent: Color(0xFFEF4444),
     cardGradientStart: Color(0xFF450A0A),
     cardGradientEnd: Color(0xFF7F1D1D),
-    mockHint: '💡 admin@kriva.app / ADM001  (Admin)\n   dev@kriva.app / DEV001  (Developer)\nPassword: password',
   ),
 };
 
-// ── Main Login Screen ──────────────────────────────────────────────────────────
+final _loginErrorProvider = StateProvider<String?>((ref) => null);
+final _loginPortalProvider = StateProvider<_PortalType>((ref) => _PortalType.admin);
+
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -81,7 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _passwordController = TextEditingController();
 
   late TabController _tabController;
-  _PortalType _selectedPortal = _PortalType.member;
+  _PortalType _selectedPortal = _PortalType.admin;
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
@@ -89,12 +97,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    final initialPortal = ref.read(_loginPortalProvider);
+    _selectedPortal = initialPortal;
+    _errorMessage = ref.read(_loginErrorProvider);
+    
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: initialPortal.index,
+    );
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) return;
       setState(() {
         _selectedPortal = _PortalType.values[_tabController.index];
+        ref.read(_loginPortalProvider.notifier).state = _selectedPortal;
         _errorMessage = null;
+        ref.read(_loginErrorProvider.notifier).state = null;
         _loginIdController.clear();
         _passwordController.clear();
       });
@@ -117,17 +135,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       _errorMessage = null;
     });
 
+    final errorNotifier = ref.read(_loginErrorProvider.notifier);
+
     try {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signIn(
         _loginIdController.text.trim(),
         _passwordController.text.trim(),
+        expectedRole: _roleForPortal(_selectedPortal),
       );
       // GoRouter redirect triggers and routes to the correct role portal
     } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      errorNotifier.state = errorMsg;
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = errorMsg;
         });
       }
     } finally {
@@ -137,41 +160,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     }
   }
 
-  Future<void> _handleGoogleSignIn() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final authRepo = ref.read(authRepositoryProvider);
-      await authRepo.signInWithGoogle();
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  void _showAccessRequestForm() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => _AccessRequestFormSheet(ref: ref),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final useMock = ref.watch(useMockModeProvider);
+    if (kIsWeb) {
+      return const WebLoginScreen();
+    }
     final config = _portals[_selectedPortal]!;
 
     return Scaffold(
@@ -227,7 +220,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           SafeArea(
             child: Column(
               children: [
-                // Top bar: mock toggle
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -258,51 +250,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           ),
                         ],
                       ),
-                      // Mock toggle
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.border, width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              useMock ? 'Mock' : 'Live',
-                              style: TextStyle(
-                                color: useMock
-                                    ? AppColors.accent
-                                    : AppColors.success,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 11,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            SizedBox(
-                              height: 22,
-                              width: 34,
-                              child: Switch(
-                                value: useMock,
-                                onChanged: (val) {
-                                  ref
-                                      .read(useMockModeProvider.notifier)
-                                      .toggle(val);
-                                },
-                                activeThumbColor: AppColors.accent,
-                                activeTrackColor: AppColors.accent.withValues(
-                                  alpha: 0.3,
-                                ),
-                                inactiveThumbColor: AppColors.success,
-                                inactiveTrackColor: AppColors.success
-                                    .withValues(alpha: 0.3),
-                              ),
-                            ),
-                          ],
+                      const Text(
+                        'Secure Login',
+                        style: TextStyle(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
                         ),
                       ),
                     ],
@@ -411,27 +364,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               fontWeight: FontWeight.w500,
                               fontSize: 11,
                             ),
-                            tabs: [
-                              _PortalTab(
-                                icon: Icons.person_rounded,
-                                label: 'Member',
-                                color: const Color(0xFF6366F1),
-                                isSelected:
-                                    _selectedPortal == _PortalType.member,
+                            tabs: const [
+                              Tab(
+                                height: 44,
+                                icon: Icon(Icons.person_rounded),
+                                text: 'Member',
                               ),
-                              _PortalTab(
-                                icon: Icons.star_rounded,
-                                label: 'Lead',
-                                color: const Color(0xFF10B981),
-                                isSelected:
-                                    _selectedPortal == _PortalType.lead,
+                              Tab(
+                                height: 44,
+                                icon: Icon(Icons.star_rounded),
+                                text: 'Lead',
                               ),
-                              _PortalTab(
-                                icon: Icons.admin_panel_settings_rounded,
-                                label: 'Admin',
-                                color: const Color(0xFFEF4444),
-                                isSelected:
-                                    _selectedPortal == _PortalType.admin,
+                              Tab(
+                                height: 44,
+                                icon: Icon(Icons.admin_panel_settings_rounded),
+                                text: 'Admin',
                               ),
                             ],
                           ),
@@ -564,8 +511,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                         size: 18,
                                         color: AppColors.textMuted,
                                       ),
-                                      onPressed: () => setState(() =>
-                                          _obscurePassword = !_obscurePassword),
+                                      onPressed: () => setState(
+                                        () => _obscurePassword =
+                                            !_obscurePassword,
+                                      ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -615,31 +564,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   ),
                                 ],
 
-                                // Mock hint
-                                if (useMock) ...[
-                                  const SizedBox(height: 10),
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: config.accent.withValues(
-                                        alpha: 0.08,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      config.mockHint,
-                                      style: TextStyle(
-                                        color: config.accent.withValues(
-                                          alpha: 0.9,
-                                        ),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ],
-
                                 const SizedBox(height: 20),
 
                                 // Login Button
@@ -658,8 +582,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                             vertical: 15,
                                           ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(14),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
                                           ),
                                           elevation: 0,
                                           shadowColor: config.accent.withValues(
@@ -686,78 +611,73 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             ),
                           ),
                         ),
-                        const SizedBox(height: 20),
-
-                        // ── Google Sign In ──────────────────────────────────
-                        if (!_isLoading)
-                          OutlinedButton(
-                            onPressed: _handleGoogleSignIn,
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                color: AppColors.border,
-                                width: 1,
+                        const SizedBox(height: 14),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            showModalBottomSheet<void>(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: AppColors.surface,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(24),
+                                ),
                               ),
-                              backgroundColor:
-                                  AppColors.surface.withValues(alpha: 0.3),
-                              padding: const EdgeInsets.symmetric(vertical: 13),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
+                              builder: (context) =>
+                                  AccessRequestFormSheet(ref: ref),
+                            );
+                          },
+                          icon: const Icon(Icons.how_to_reg_rounded),
+                          label: const Text(
+                            'New here? Request access from Admin',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: config.accent,
+                            side: BorderSide(
+                              color: config.accent.withValues(alpha: 0.65),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.network(
-                                  'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
-                                  height: 18,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(
-                                        Icons.g_mobiledata,
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  AppLocalizations.of(
-                                        context,
-                                      )?.translate('login_button') ??
-                                      'Sign In with Google',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelLarge
-                                      ?.copyWith(color: AppColors.textPrimary),
-                                ),
-                              ],
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
+                        ),
                         const SizedBox(height: 16),
-                        // ── Request Admission ──────────────────────────────
-                        if (!_isLoading)
-                          Center(
-                            child: TextButton.icon(
-                              onPressed: _showAccessRequestForm,
-                              icon: Icon(
-                                Icons.how_to_reg_outlined,
-                                size: 16,
-                                color: config.accent,
-                              ),
-                              label: Text(
-                                AppLocalizations.of(
-                                      context,
-                                    )?.translate('login_request_access') ??
-                                    'Request Club Admission',
-                                style: TextStyle(
-                                  color: config.accent,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  decoration: TextDecoration.underline,
-                                  decorationColor: config.accent,
-                                ),
-                              ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: config.accent.withValues(alpha: 0.25),
                             ),
                           ),
-                        const SizedBox(height: 32),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.terminal_rounded, size: 13, color: config.accent),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'Developed by ',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textMuted,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                'Abhisht Singh',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: config.accent,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -771,48 +691,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 }
 
-// ── Portal Tab Widget ──────────────────────────────────────────────────────────
-class _PortalTab extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final bool isSelected;
-
-  const _PortalTab({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.isSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tab(
-      height: 44,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 5),
-          Text(label),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Access Request Form Sheet ─────────────────────────────────────────────────
-class _AccessRequestFormSheet extends StatefulWidget {
+class AccessRequestFormSheet extends StatefulWidget {
   final WidgetRef ref;
-  const _AccessRequestFormSheet({required this.ref});
+  const AccessRequestFormSheet({super.key, required this.ref});
 
   @override
-  State<_AccessRequestFormSheet> createState() =>
+  State<AccessRequestFormSheet> createState() =>
       _AccessRequestFormSheetState();
 }
 
-class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
+class _AccessRequestFormSheetState extends State<AccessRequestFormSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _fatherNameCtrl = TextEditingController();
@@ -820,10 +709,15 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
   final _personalEmailCtrl = TextEditingController();
   final _kietEmailCtrl = TextEditingController();
   final _aadharCtrl = TextEditingController();
+  final _githubCtrl = TextEditingController();
+  final _linkedinCtrl = TextEditingController();
+  final _instagramCtrl = TextEditingController();
+  final _batchCtrl = TextEditingController(text: 'Batch of 2028');
 
   String _selectedRole = 'member';
   final List<String> _selectedDomains = [];
   bool _isSaving = false;
+  String? _submissionError;
 
   final PageController _pageController = PageController();
   int _currentStep = 0;
@@ -837,27 +731,33 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
     _personalEmailCtrl.dispose();
     _kietEmailCtrl.dispose();
     _aadharCtrl.dispose();
+    _githubCtrl.dispose();
+    _linkedinCtrl.dispose();
+    _instagramCtrl.dispose();
+    _batchCtrl.dispose();
     super.dispose();
   }
 
   void _nextStep() {
+    setState(() => _submissionError = null);
     if (_currentStep == 0) {
-      if (_nameCtrl.text.isEmpty ||
-          _fatherNameCtrl.text.isEmpty ||
+      if (_nameCtrl.text.trim().isEmpty ||
+          _fatherNameCtrl.text.trim().isEmpty ||
           _phoneCtrl.text.length < 10) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please fill all basic details correctly'),
-          ),
+        setState(
+          () => _submissionError = 'Please fill all basic details correctly.',
         );
         return;
       }
     } else if (_currentStep == 1) {
-      if (!_personalEmailCtrl.text.contains('@') ||
-          !_kietEmailCtrl.text.endsWith('kiet.edu') ||
-          _aadharCtrl.text.length < 12) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill valid emails and Aadhar')),
+      final kietEmail = _kietEmailCtrl.text.trim().toLowerCase();
+      final aadhar = _aadharCtrl.text.replaceAll(RegExp(r'\s'), '');
+      if (!_personalEmailCtrl.text.trim().contains('@') ||
+          !RegExp(r'^[^@\s]+@kiet\.edu$').hasMatch(kietEmail) ||
+          !RegExp(r'^\d{12}$').hasMatch(aadhar)) {
+        setState(
+          () => _submissionError =
+              'Enter valid emails and a 12-digit Aadhar number.',
         );
         return;
       }
@@ -884,22 +784,23 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
     }
   }
 
-  void _submitRequest() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _submitRequest() async {
+    setState(() => _submissionError = null);
+    if (!_formKey.currentState!.validate()) {
+      setState(() => _submissionError = 'Please correct the form details.');
+      return;
+    }
 
-    if (_selectedDomains.isEmpty && _selectedRole != 'admin') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one Domain Interest'),
-          backgroundColor: AppColors.error,
-        ),
+    if (_selectedDomains.isEmpty) {
+      setState(
+        () => _submissionError = 'Please select at least one Domain Interest.',
       );
       return;
     }
 
     setState(() => _isSaving = true);
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     try {
       final reqId = 'req_${const Uuid().v4().substring(0, 8)}';
@@ -910,8 +811,14 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
         phoneNumber: _phoneCtrl.text.trim(),
         personalEmail: _personalEmailCtrl.text.trim(),
         kietEmail: _kietEmailCtrl.text.trim(),
-        aadharNumber: _aadharCtrl.text.trim(),
+        aadharNumber: _aadharCtrl.text.replaceAll(RegExp(r'\s'), ''),
+        githubId: _githubCtrl.text.trim(),
+        linkedinId: _linkedinCtrl.text.trim(),
+        instagramId: _instagramCtrl.text.trim(),
         requestedRole: _selectedRole,
+        batch: _batchCtrl.text.trim().startsWith('Batch')
+            ? _batchCtrl.text.trim()
+            : 'Batch of ${_batchCtrl.text.trim()}',
         domainInterest: _selectedDomains,
         status: 'pending',
         requestedAt: DateTime.now(),
@@ -920,7 +827,6 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
       final db = widget.ref.read(databaseRepositoryProvider);
       await db.submitAccessRequest(request);
 
-      navigator.pop();
       scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text(
@@ -929,13 +835,14 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
           backgroundColor: AppColors.success,
         ),
       );
+      navigator.pop();
     } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Error submitting request: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      if (mounted) {
+        setState(
+          () => _submissionError =
+              'Could not submit your request: ${e.toString().replaceFirst('Exception: ', '')}',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -953,7 +860,7 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
           height: 8,
           width: isActive ? 24 : 8,
           decoration: BoxDecoration(
-            color: isActive || isPassed ? AppColors.primary : AppColors.border,
+            color: isActive || isPassed ? Theme.of(context).colorScheme.primary : AppColors.border,
             borderRadius: BorderRadius.circular(4),
           ),
         );
@@ -1037,6 +944,18 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
                               ? 'Enter valid phone number'
                               : null,
                         ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _batchCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Batch of',
+                            hintText: 'e.g. 2028 or Passing Year',
+                            prefixIcon: Icon(Icons.school_outlined, size: 20),
+                          ),
+                          validator: (v) => v == null || v.trim().isEmpty
+                              ? 'Enter passing year or batch'
+                              : null,
+                        ),
                       ],
                     ),
                   ),
@@ -1085,6 +1004,41 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
                               ? 'Enter valid 12-digit Aadhar'
                               : null,
                         ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _githubCtrl,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            labelText: 'GitHub username (optional)',
+                            hintText: 'e.g. octocat',
+                            prefixIcon: Icon(Icons.code_rounded, size: 20),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _linkedinCtrl,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            labelText: 'LinkedIn username or URL (optional)',
+                            hintText: 'e.g. in/your-name',
+                            prefixIcon: Icon(
+                              Icons.business_center_outlined,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _instagramCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Instagram username (optional)',
+                            hintText: 'e.g. your_handle',
+                            prefixIcon: Icon(
+                              Icons.camera_alt_outlined,
+                              size: 20,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1128,15 +1082,16 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
                           spacing: 8,
                           runSpacing: 8,
                           children: ['dsa', 'web_dev', 'ml'].map((domain) {
-                            final isSelected =
-                                _selectedDomains.contains(domain);
+                            final isSelected = _selectedDomains.contains(
+                              domain,
+                            );
                             return FilterChip(
                               label: Text(domain.toUpperCase()),
                               selected: isSelected,
-                              selectedColor: AppColors.primary.withValues(
+                              selectedColor: Theme.of(context).colorScheme.primary.withValues(
                                 alpha: 0.25,
                               ),
-                              checkmarkColor: AppColors.primary,
+                              checkmarkColor: Theme.of(context).colorScheme.primary,
                               onSelected: (selected) {
                                 setState(() {
                                   if (selected) {
@@ -1156,6 +1111,23 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
               ),
             ),
             const SizedBox(height: 16),
+            if (_submissionError != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.45),
+                  ),
+                ),
+                child: Text(
+                  _submissionError!,
+                  style: const TextStyle(color: AppColors.error, fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1168,7 +1140,7 @@ class _AccessRequestFormSheetState extends State<_AccessRequestFormSheet> {
                     : ElevatedButton(
                         onPressed: _nextStep,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 32,
                             vertical: 12,

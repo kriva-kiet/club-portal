@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/service_providers.dart';
 import '../../models/user_model.dart';
 import '../../models/domain_model.dart';
+import 'widgets/lead_quick_actions.dart';
+import 'widgets/quiz_builder_sheet.dart';
+import '../admin/widgets/bulk_module_upload_dialog.dart';
+import '../../widgets/app_avatar.dart';
+import '../../widgets/app_footer.dart';
+import '../complaints/complaint_box_dialog.dart';
 
-/// Provider that streams all members — used by the Lead Hub
 final _leadMembersProvider = StreamProvider<List<UserModel>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const Stream.empty();
+  
   final db = ref.watch(databaseRepositoryProvider);
   return db.getMembers();
 });
@@ -64,6 +73,32 @@ class LeadHubScreen extends ConsumerWidget {
                           ),
                         ),
                         const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.terminal_rounded, size: 12, color: Color(0xFF10B981)),
+                              SizedBox(width: 4),
+                              Text(
+                                'Dev: Abhisht Singh',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF10B981),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         _RoleBadge(role: user.role),
                       ],
                     ),
@@ -85,24 +120,12 @@ class LeadHubScreen extends ConsumerWidget {
                       ),
                       child: Row(
                         children: [
-                          CircleAvatar(
+                          AppAvatar(
+                            photoUrl: user.photoUrl,
+                            name: user.name,
                             radius: 28,
-                            backgroundImage: user.photoUrl.isNotEmpty
-                                ? NetworkImage(user.photoUrl)
-                                : null,
-                            backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.2),
-                            child: user.photoUrl.isEmpty
-                                ? Text(
-                                    user.name.isNotEmpty
-                                        ? user.name[0].toUpperCase()
-                                        : 'L',
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF10B981),
-                                    ),
-                                  )
-                                : null,
+                            borderWidth: 2,
+                            borderColor: const Color(0xFF10B981),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -184,7 +207,7 @@ class LeadHubScreen extends ConsumerWidget {
                       data: (domains) {
                         final myDomains = domains
                             .where((d) =>
-                                d.leadUserId == user.uid ||
+                                d.leadUserIds.contains(user.uid) ||
                                 user.domainsFollowing.contains(d.id))
                             .toList();
                         if (myDomains.isEmpty) {
@@ -227,41 +250,129 @@ class LeadHubScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.quiz_outlined,
-                            label: 'Create Quiz',
-                            color: const Color(0xFF6366F1),
-                            onTap: () {},
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.campaign_outlined,
-                            label: 'Broadcast',
-                            color: const Color(0xFFF59E0B),
-                            onTap: () {},
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.event_outlined,
-                            label: 'Schedule',
-                            color: const Color(0xFF10B981),
-                            onTap: () {},
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                    Builder(
+                      builder: (context) {
+                        final myDomains = domainsAsync.valueOrNull
+                                ?.where((d) =>
+                                    d.leadUserIds.contains(user.uid) ||
+                                    user.domainsFollowing.contains(d.id))
+                                .toList() ??
+                            [];
+                            
+                        return Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _QuickActionCard(
+                                    icon: Icons.quiz_outlined,
+                                    label: 'Create Quiz',
+                                    color: const Color(0xFF6366F1),
+                                    onTap: () {
+                                      if (myDomains.isEmpty) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('No domain assigned. Contact Admin.')),
+                                        );
+                                        return;
+                                      }
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: AppColors.surface,
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                        ),
+                                        builder: (context) => QuizBuilderSheet(
+                                          domains: myDomains,
+                                          userId: user.uid,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _QuickActionCard(
+                                    icon: Icons.campaign_outlined,
+                                    label: 'Broadcast',
+                                    color: const Color(0xFFF59E0B),
+                                    onTap: () {
+                                      if (myDomains.isEmpty) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('No domain assigned. Contact Admin.')),
+                                        );
+                                        return;
+                                      }
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: AppColors.surface,
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                        ),
+                                        builder: (_) => BroadcastFormSheet(domains: myDomains, userId: user.uid),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _QuickActionCard(
+                                    icon: Icons.event_outlined,
+                                    label: 'Schedule',
+                                    color: const Color(0xFF10B981),
+                                    onTap: () {
+                                      if (myDomains.isEmpty) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('No domain assigned. Contact Admin.')),
+                                        );
+                                        return;
+                                      }
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: AppColors.surface,
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                        ),
+                                        builder: (_) => ScheduleFormSheet(domains: myDomains, userId: user.uid),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _QuickActionCard(
+                                    icon: Icons.shield_outlined,
+                                    label: 'Grievance Box',
+                                    color: const Color(0xFFEF4444),
+                                    onTap: () => ComplaintBoxDialog.show(context),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _QuickActionCard(
+                                    icon: Icons.account_balance_rounded,
+                                    label: 'Authorities',
+                                    color: const Color(0xFF3B82F6),
+                                    onTap: () => context.push('/authorities'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                  },
                 ),
-              ),
+                const SizedBox(height: 24),
+              ],
             ),
+          ),
+        ),
 
             // ── Member Overview ───────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -283,7 +394,7 @@ class LeadHubScreen extends ConsumerWidget {
                       data: (domains) {
                         final myDomainIds = domains
                             .where((d) =>
-                                d.leadUserId == user.uid ||
+                                d.leadUserIds.contains(user.uid) ||
                                 user.domainsFollowing.contains(d.id))
                             .map((d) => d.id)
                             .toSet();
@@ -322,23 +433,10 @@ class LeadHubScreen extends ConsumerWidget {
                                   ),
                                   child: Row(
                                     children: [
-                                      CircleAvatar(
+                                      AppAvatar(
+                                        photoUrl: m.photoUrl,
+                                        name: m.name,
                                         radius: 18,
-                                        backgroundImage: m.photoUrl.isNotEmpty
-                                            ? NetworkImage(m.photoUrl)
-                                            : null,
-                                        backgroundColor:
-                                            AppColors.surfaceLight,
-                                        child: m.photoUrl.isEmpty
-                                            ? Text(
-                                                m.name.isNotEmpty
-                                                    ? m.name[0].toUpperCase()
-                                                    : '?',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              )
-                                            : null,
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -399,7 +497,9 @@ class LeadHubScreen extends ConsumerWidget {
                           const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Text('Error: $e'),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
+                    const AppFooter(),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -436,7 +536,7 @@ class _RoleBadge extends StatelessWidget {
         break;
       default:
         label = 'MEMBER';
-        color = AppColors.primary;
+        color = Theme.of(context).colorScheme.primary;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -465,7 +565,7 @@ class _DomainCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLead = domain.leadUserId == user.uid;
+    final isLead = domain.leadUserIds.contains(user.uid);
     final moduleCount = domain.modules.length;
     final topicCount =
         domain.modules.fold<int>(0, (sum, m) => sum + m.topics.length);
@@ -545,6 +645,34 @@ class _DomainCard extends StatelessWidget {
               _StatChip(
                 icon: Icons.check_circle_outline,
                 label: '$topicCount Topics',
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => BulkModuleUploadDialog(
+                      domainId: domain.id,
+                      domainName: domain.name,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.file_upload_outlined, size: 15, color: Color(0xFF10B981)),
+                label: const Text(
+                  'Bulk JSON',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
             ],
           ),

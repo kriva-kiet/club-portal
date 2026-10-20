@@ -8,7 +8,11 @@ class AccessRequestModel {
   final String personalEmail;
   final String kietEmail;
   final String aadharNumber;
+  final String githubId;
+  final String linkedinId;
+  final String instagramId;
   final String requestedRole; // 'member', 'lead'
+  final String batch; // e.g. 'Batch of 2028'
   final List<String> domainInterest; // ['dsa', 'web_dev', 'ml']
   final String status; // 'pending', 'approved', 'rejected'
   final DateTime requestedAt;
@@ -21,7 +25,11 @@ class AccessRequestModel {
     required this.personalEmail,
     required this.kietEmail,
     required this.aadharNumber,
+    this.githubId = '',
+    this.linkedinId = '',
+    this.instagramId = '',
     required this.requestedRole,
+    this.batch = 'Batch of 2028',
     required this.domainInterest,
     required this.status,
     required this.requestedAt,
@@ -38,7 +46,11 @@ class AccessRequestModel {
       personalEmail: map['personalEmail'] ?? '',
       kietEmail: map['kietEmail'] ?? '',
       aadharNumber: map['aadharNumber'] ?? '',
+      githubId: map['githubId'] ?? '',
+      linkedinId: map['linkedinId'] ?? '',
+      instagramId: map['instagramId'] ?? '',
       requestedRole: map['requestedRole'] ?? 'member',
+      batch: map['batch'] ?? 'Batch of 2028',
       domainInterest: domains is List ? List<String>.from(domains) : [],
       status: map['status'] ?? 'pending',
       requestedAt: requested is Timestamp
@@ -57,7 +69,11 @@ class AccessRequestModel {
       'personalEmail': personalEmail,
       'kietEmail': kietEmail,
       'aadharNumber': aadharNumber,
+      'githubId': githubId,
+      'linkedinId': linkedinId,
+      'instagramId': instagramId,
       'requestedRole': requestedRole,
+      'batch': batch,
       'domainInterest': domainInterest,
       'status': status,
       'requestedAt': Timestamp.fromDate(requestedAt),
@@ -72,7 +88,11 @@ class AccessRequestModel {
       'personalEmail': personalEmail,
       'kietEmail': kietEmail,
       'aadharNumber': aadharNumber,
+      'githubId': githubId,
+      'linkedinId': linkedinId,
+      'instagramId': instagramId,
       'requestedRole': requestedRole,
+      'batch': batch,
       'domainInterest': domainInterest,
       'status': status,
       'requestedAt': requestedAt.toIso8601String(),

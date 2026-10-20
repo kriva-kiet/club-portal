@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/service_providers.dart';
-import '../../services/auth/mock_auth_repository.dart';
 import '../main_navigation_scaffold.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../models/user_model.dart';
@@ -13,13 +12,17 @@ import '../../models/broadcast_model.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/radial_progress.dart';
 import '../leaderboard/leaderboard_screen.dart';
+import '../../widgets/user_list_sheet.dart';
+import '../../widgets/app_avatar.dart';
+import '../quiz/quiz_runtime_screen.dart';
+import '../../widgets/app_footer.dart';
+import '../complaints/complaint_box_dialog.dart';
+import '../authorities/authorities_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   void _showStreakInfo(BuildContext context, WidgetRef ref, UserModel user) {
-    final useMock = ref.read(useMockModeProvider);
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -35,7 +38,7 @@ class DashboardScreen extends ConsumerWidget {
               color: AppColors.accent,
               size: 28,
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Text('Streak Board', style: Theme.of(context).textTheme.titleLarge),
           ],
         ),
@@ -52,29 +55,6 @@ class DashboardScreen extends ConsumerWidget {
               'Keep logging activity (completing topics, sending broadcasts, reading announcements) daily to build up your streak. Missing a day resets the counter!',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
-            if (useMock) ...[
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: () {
-                  final authRepo = ref.read(authRepositoryProvider);
-                  if (authRepo is MockAuthRepository) {
-                    authRepo.updateStreak(1);
-                  }
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Streak checked in successfully (+1 Day)!'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.check_circle_outline),
-                label: const Text('Simulate Daily Activity'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
-                ),
-              ),
-            ],
           ],
         ),
         actions: [
@@ -95,6 +75,7 @@ class DashboardScreen extends ConsumerWidget {
   ) {
     // Mark as read immediately
     ref.read(databaseRepositoryProvider).markBroadcastAsRead(uid, bc.id);
+    final currentUser = ref.read(currentUserProvider);
 
     showModalBottomSheet(
       context: context,
@@ -116,13 +97,13 @@ class DashboardScreen extends ConsumerWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     bc.audienceType.toUpperCase(),
-                    style: const TextStyle(
-                      color: AppColors.primary,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -164,9 +145,62 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Acknowledge'),
+            Row(
+              children: [
+                if (currentUser?.role == UserRole.admin || currentUser?.role == UserRole.lead) ...[
+                  IconButton(
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: AppColors.surface,
+                          title: const Text('Delete Broadcast?'),
+                          content: const Text(
+                            'Are you sure you want to delete this broadcast? This action cannot be undone.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.error,
+                              ),
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true && context.mounted) {
+                        Navigator.of(context).pop(); // close sheet
+                        await ref
+                            .read(databaseRepositoryProvider)
+                            .deleteBroadcast(bc.id);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Broadcast deleted successfully'),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                    tooltip: 'Delete Broadcast',
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Acknowledge'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -179,6 +213,8 @@ class DashboardScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final broadcastsAsync = ref.watch(broadcastsProvider);
     final domainsAsync = ref.watch(domainsProvider);
+    final postsAsync = ref.watch(postsProvider('all'));
+    final quizzesAsync = ref.watch(standaloneQuizzesProvider);
     final currentTab = ref.watch(navigationTabProvider);
     final isDashboardActive = currentTab == 0;
 
@@ -197,56 +233,93 @@ class DashboardScreen extends ConsumerWidget {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              // 1. Header Profile & Streak Bar
+              // 1. Header Profile & Streak Bar — KRIVA branded gradient hero
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF1A0000), Color(0xFF0A0A0A)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
                   child: Row(
                     children: [
-                      // Branded Mini Logo
+                      // KRIVA logo with red glow ring
                       Container(
                         padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.3),
-                            width: 1.5,
+                          gradient: const LinearGradient(
+                            colors: [AppColors.primary, AppColors.primaryDark],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.45),
+                              blurRadius: 12,
+                              spreadRadius: 1,
+                            ),
+                          ],
                         ),
                         child: ClipOval(
                           child: Image.asset(
-                            'assets/images/logo.png',
-                            width: 36,
-                            height: 36,
+                            'assets/images/app_icon.png',
+                            width: 38,
+                            height: 38,
                             fit: BoxFit.cover,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'KRIVA',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.primary,
-                          letterSpacing: 1.2,
+                      )
+                          .animate()
+                          .fadeIn(duration: 400.ms)
+                          .scaleXY(begin: 0.8, end: 1.0, curve: Curves.elasticOut, duration: 600.ms),
+                      const SizedBox(width: 10),
+                      // KRIVA gradient wordmark
+                      ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [AppColors.primaryLight, AppColors.primary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ).createShader(bounds),
+                        child: const Text(
+                          'KRIVA',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 2.5,
+                          ),
                         ),
-                      ),
+                      )
+                          .animate()
+                          .fadeIn(delay: 150.ms, duration: 400.ms)
+                          .slideX(begin: -0.2, end: 0, duration: 400.ms),
                       const Spacer(),
+
+                      // Admin / Lead Panel Shortcut
+                      if (user.role == UserRole.admin || user.role == UserRole.developer)
+                        IconButton(
+                          icon: const Icon(Icons.admin_panel_settings, color: AppColors.accent),
+                          tooltip: 'Admin Panel',
+                          onPressed: () => context.go('/admin'),
+                        )
+                      else if (user.role == UserRole.lead)
+                        IconButton(
+                          icon: const Icon(Icons.hub, color: AppColors.accent),
+                          tooltip: 'Lead Hub',
+                          onPressed: () => context.go('/lead'),
+                        ),
+
                       // Avatar
-                      CircleAvatar(
+                      AppAvatar(
+                        photoUrl: user.photoUrl,
+                        name: user.name,
                         radius: 20,
-                        backgroundColor: AppColors.surfaceLight,
-                        backgroundImage: user.photoUrl.isNotEmpty
-                            ? NetworkImage(user.photoUrl)
-                            : null,
-                        child: user.photoUrl.isEmpty
-                            ? const Icon(
-                                Icons.person,
-                                color: Colors.white,
-                                size: 14,
-                              )
-                            : null,
+                        borderWidth: 1.5,
+                        borderColor: AppColors.primary.withValues(alpha: 0.6),
                       ),
                       const SizedBox(width: 8),
 
@@ -267,16 +340,29 @@ class DashboardScreen extends ConsumerWidget {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: user.streak.count > 0
-                                ? AppColors.accent.withValues(alpha: 0.12)
-                                : AppColors.surface,
+                            gradient: user.streak.count > 0
+                                ? const LinearGradient(
+                                    colors: [Color(0x33FF6D00), Color(0x22FF1744)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : null,
+                            color: user.streak.count > 0 ? null : AppColors.surface,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: user.streak.count > 0
-                                  ? AppColors.accent.withValues(alpha: 0.3)
+                                  ? AppColors.accent.withValues(alpha: 0.5)
                                   : AppColors.border,
                               width: 1.5,
                             ),
+                            boxShadow: user.streak.count > 0
+                                ? [
+                                    BoxShadow(
+                                      color: AppColors.accent.withValues(alpha: 0.2),
+                                      blurRadius: 8,
+                                    ),
+                                  ]
+                                : null,
                           ),
                           child: Row(
                             children: [
@@ -307,20 +393,224 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
 
+              // Social Stats row
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      _DashboardStatCard(
+                        label: 'Posts',
+                        value: postsAsync.maybeWhen(
+                          data: (posts) => '${posts.where((p) => p.authorUid == user.uid).length}',
+                          orElse: () => '-',
+                        ),
+                        icon: Icons.article_outlined,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      _DashboardStatCard(
+                        label: 'Followers',
+                        value: '${user.followerIds.length}',
+                        icon: Icons.people_outline,
+                        color: AppColors.secondary,
+                        onTap: () {
+                          if (user.followerIds.isNotEmpty) {
+                            UserListSheet.show(
+                              context,
+                              title: 'Followers',
+                              userIds: user.followerIds,
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _DashboardStatCard(
+                        label: 'Following',
+                        value: '${user.followingIds.length}',
+                        icon: Icons.person_add_alt,
+                        color: AppColors.accent,
+                        onTap: () {
+                          if (user.followingIds.isNotEmpty) {
+                            UserListSheet.show(
+                              context,
+                              title: 'Following',
+                              userIds: user.followingIds,
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Quick Actions: Authorities & Anonymous Complaint Box
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: [
+                      // Authorities & Leadership Card
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => context.push('/authorities'),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF312E81).withValues(alpha: 0.35),
+                                    AppColors.surface,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.account_balance_rounded,
+                                      color: Color(0xFF818CF8),
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: const [
+                                        Text(
+                                          'Authorities',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Council & Cells',
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Anonymous Grievance Box Card
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => ComplaintBoxDialog.show(context),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF7F1D1D).withValues(alpha: 0.3),
+                                    AppColors.surface,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.shield_outlined,
+                                      color: AppColors.primaryLight,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: const [
+                                        Text(
+                                          'Grievance Box',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        Text(
+                                          '100% Anonymous',
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
               // 2. Announcements Headline
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.campaign_outlined,
-                        color: AppColors.primary,
+                        color: Theme.of(context).colorScheme.primary,
                         size: 22,
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        AppLocalizations.of(context)?.translate('recent_broadcasts') ??
+                        AppLocalizations.of(
+                              context,
+                            )?.translate('recent_broadcasts') ??
                             'Recent Broadcasts',
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
@@ -389,7 +679,7 @@ class DashboardScreen extends ConsumerWidget {
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
                                       color: isUnread
-                                          ? AppColors.primary.withValues(
+                                          ? Theme.of(context).colorScheme.primary.withValues(
                                               alpha: 0.5,
                                             )
                                           : AppColors.border,
@@ -419,9 +709,9 @@ class DashboardScreen extends ConsumerWidget {
                                             Container(
                                               width: 8,
                                               height: 8,
-                                              decoration: const BoxDecoration(
+                                              decoration: BoxDecoration(
                                                 shape: BoxShape.circle,
-                                                color: AppColors.primary,
+                                                color: Theme.of(context).colorScheme.primary,
                                               ),
                                             ),
                                           ],
@@ -502,8 +792,9 @@ class DashboardScreen extends ConsumerWidget {
                               s.rsvps.contains(user.uid);
                         }).toList();
 
-                        if (rsvpdSessions.isEmpty)
+                        if (rsvpdSessions.isEmpty) {
                           return const SizedBox.shrink();
+                        }
 
                         // Sort to get the closest one
                         rsvpdSessions.sort(
@@ -615,6 +906,178 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
 
+              // 3.5 Available Assessments
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.assignment_outlined,
+                        color: AppColors.accent,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Available Assessments',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              SliverToBoxAdapter(
+                child: quizzesAsync.when(
+                  data: (quizzes) {
+                    if (quizzes.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: Text(
+                          'No available assessments at the moment.',
+                          style: TextStyle(color: AppColors.textMuted),
+                        ),
+                      );
+                    }
+
+                    return SizedBox(
+                      height: 120,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: quizzes.length,
+                        itemBuilder: (context, index) {
+                          final quiz = quizzes[index];
+                          final canDelete = user.role == UserRole.admin || user.role == UserRole.lead;
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Stack(
+                              children: [
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => QuizRuntimeScreen(quiz: quiz),
+                                      ),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    width: 200,
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface.withValues(alpha: 0.5),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: AppColors.border),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.quiz, color: AppColors.accent, size: 16),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Padding(
+                                                padding: canDelete ? const EdgeInsets.only(right: 18) : EdgeInsets.zero,
+                                                child: Text(
+                                                  quiz.title,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          '${quiz.questions.length} questions',
+                                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                        ),
+                                        if (quiz.type == 'timed' && quiz.timeLimitMinutes != null)
+                                          Text(
+                                            '⏱ ${quiz.timeLimitMinutes} min limit',
+                                            style: const TextStyle(fontSize: 12, color: AppColors.error),
+                                          )
+                                        else
+                                          const Text(
+                                            'Untimed',
+                                            style: TextStyle(fontSize: 12, color: AppColors.success),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                if (canDelete)
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: IconButton(
+                                      iconSize: 18,
+                                      constraints: const BoxConstraints(),
+                                      padding: const EdgeInsets.all(6),
+                                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                                      tooltip: 'Delete Assessment',
+                                      onPressed: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            backgroundColor: AppColors.surface,
+                                            title: const Text('Delete Assessment?'),
+                                            content: Text(
+                                              'Are you sure you want to delete "${quiz.title}"? This cannot be undone.',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(ctx, false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: AppColors.error,
+                                                ),
+                                                onPressed: () => Navigator.pop(ctx, true),
+                                                child: const Text('Delete'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+
+                                        if (confirm == true && context.mounted) {
+                                          await ref
+                                              .read(databaseRepositoryProvider)
+                                              .deleteStandaloneQuiz(quiz.id);
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Assessment deleted'),
+                                                backgroundColor: AppColors.success,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, s) => Text('Error: $e'),
+                ),
+              ),
+
               // 4. Learning Roadmaps progress header
               SliverToBoxAdapter(
                 child: Padding(
@@ -628,7 +1091,9 @@ class DashboardScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        AppLocalizations.of(context)?.translate('progress_label') ??
+                        AppLocalizations.of(
+                              context,
+                            )?.translate('progress_label') ??
                             'Your Domain Progress',
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
@@ -716,99 +1181,90 @@ class DashboardScreen extends ConsumerWidget {
                                       progress?.topicsCompleted.length ?? 0;
 
                                   final cardContent = Material(
-                                     color: Colors.transparent,
-                                     child: GlassContainer(
-                                       padding: EdgeInsets.zero,
-                                       child: InkWell(
-                                         borderRadius: BorderRadius.circular(
-                                           16,
-                                         ),
-                                         onTap: () {
-                                           context.push(
-                                             '/roadmap/${domain.id}',
-                                           );
-                                         },
-                                         child: Padding(
-                                           padding: const EdgeInsets.all(18),
-                                           child: Row(
-                                             children: [
-                                               // Glowing Radial Progress Ring
-                                               RadialProgress(
-                                                 percentage: percent,
-                                                 size: 64,
-                                                 strokeWidth: 6,
-                                                 activeColor:
-                                                     AppColors.secondary,
-                                                 child: Text(
-                                                   '${(percent * 100).toInt()}%',
-                                                   style: const TextStyle(
-                                                     color: AppColors
-                                                         .textPrimary,
-                                                     fontWeight:
-                                                         FontWeight.bold,
-                                                     fontSize: 14,
-                                                   ),
-                                                 ),
-                                               ),
-                                               const SizedBox(width: 16),
-                                               // Domain Info
-                                               Expanded(
-                                                 child: Column(
-                                                   mainAxisAlignment:
-                                                       MainAxisAlignment
-                                                           .center,
-                                                   crossAxisAlignment:
-                                                       CrossAxisAlignment
-                                                           .start,
-                                                   children: [
-                                                     Text(
-                                                       domain.name,
-                                                       style: const TextStyle(
-                                                         fontWeight:
-                                                             FontWeight.bold,
-                                                         fontSize: 18,
-                                                         color: AppColors
-                                                             .textPrimary,
-                                                       ),
-                                                     ),
-                                                     const SizedBox(
-                                                       height: 6,
-                                                     ),
-                                                     Text(
-                                                       '$completedCount ${AppLocalizations.of(context)?.translate('completed_tasks') ?? 'tasks completed'}',
-                                                       style: const TextStyle(
-                                                         color: AppColors
-                                                             .textSecondary,
-                                                         fontSize: 13,
-                                                       ),
-                                                     ),
-                                                   ],
-                                                 ),
-                                               ),
-                                               const Icon(
-                                                 Icons.chevron_right_rounded,
-                                                 color: AppColors.textMuted,
-                                                 size: 24,
-                                               ),
-                                             ],
-                                           ),
-                                         ),
-                                       ),
-                                     ),
-                                   );
+                                    color: Colors.transparent,
+                                    child: GlassContainer(
+                                      padding: EdgeInsets.zero,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(16),
+                                        onTap: () {
+                                          context.push('/roadmap/${domain.id}');
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(18),
+                                          child: Row(
+                                            children: [
+                                              // Glowing Radial Progress Ring
+                                              RadialProgress(
+                                                percentage: percent,
+                                                size: 64,
+                                                strokeWidth: 6,
+                                                activeColor:
+                                                    AppColors.secondary,
+                                                child: Text(
+                                                  '${(percent * 100).toInt()}%',
+                                                  style: const TextStyle(
+                                                    color:
+                                                        AppColors.textPrimary,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              // Domain Info
+                                              Expanded(
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      domain.name,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 18,
+                                                        color: AppColors
+                                                            .textPrimary,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 6),
+                                                    Text(
+                                                      '$completedCount ${AppLocalizations.of(context)?.translate('completed_tasks') ?? 'tasks completed'}',
+                                                      style: const TextStyle(
+                                                        color: AppColors
+                                                            .textSecondary,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const Icon(
+                                                Icons.chevron_right_rounded,
+                                                color: AppColors.textMuted,
+                                                size: 24,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
 
-                                   return Padding(
-                                     padding: const EdgeInsets.symmetric(
-                                       horizontal: 8,
-                                       vertical: 6,
-                                     ),
-                                     child: isDashboardActive
-                                         ? Hero(
-                                             tag: 'domain_card_${domain.id}',
-                                             child: cardContent,
-                                           )
-                                         : cardContent,
-                                   );
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 6,
+                                    ),
+                                    child: isDashboardActive
+                                        ? Hero(
+                                            tag: 'domain_card_${domain.id}',
+                                            child: cardContent,
+                                          )
+                                        : cardContent,
+                                  );
                                 },
                                 loading: () => const Padding(
                                   padding: EdgeInsets.symmetric(
@@ -837,8 +1293,69 @@ class DashboardScreen extends ConsumerWidget {
                 error: (e, s) => SliverToBoxAdapter(child: Text('Error: $e')),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 16, bottom: 24),
+                  child: AppFooter(),
+                ),
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardStatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _DashboardStatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border, width: 1),
+            ),
+            child: Column(
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
+                ),
+              ],
+            ),
           ),
         ),
       ),

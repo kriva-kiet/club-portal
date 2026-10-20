@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_colors.dart';
 
 class AnimatedButton extends StatefulWidget {
   final VoidCallback onPressed;
@@ -66,15 +65,15 @@ class _AnimatedButtonState extends State<AnimatedButton>
         scale: _scaleAnimation,
         child: Container(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, Color(0xFF0052CC)],
+            gradient: LinearGradient(
+              colors: [Theme.of(context).colorScheme.primary, Color(0xFF0052CC)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.3),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),

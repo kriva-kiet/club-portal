@@ -1,5 +1,4 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,52 +10,15 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
 import 'services/service_providers.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize SharedPreferences first
-  final sharedPreferences = await SharedPreferences.getInstance();
-
-  // Attempt Firebase init — falls back to Mock Mode on unsupported platforms
-  // (e.g. macOS desktop, web when not configured)
-  bool firebaseAvailable = false;
   try {
+    final sharedPreferences = await SharedPreferences.getInstance();
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    firebaseAvailable = true;
-    debugPrint('✅ Firebase initialized successfully.');
-    // ── FORCE MOCK MODE ────────────────────────────────────────────────────
-    // Real Firebase accounts for test users have not been created yet.
-    // We always boot into Mock Mode so demo credentials work out of the box.
-    // To use Firebase (Live mode), the user can toggle the switch after login.
-    // Remove this line once real Firebase accounts are provisioned.
-    await sharedPreferences.setBool('use_mock_mode_v1', true);
-    debugPrint('   → Defaulting to Mock Mode (no Firebase accounts configured).');
-  } on UnsupportedError catch (e) {
-    debugPrint('⚠️  Firebase not supported on this platform: $e');
-    debugPrint('   → Switching to Mock Mode automatically.');
-    await sharedPreferences.setBool('use_mock_mode_v1', true);
-  } catch (e) {
-    debugPrint('⚠️  Firebase init failed: $e');
-    debugPrint('   → Switching to Mock Mode automatically.');
-    await sharedPreferences.setBool('use_mock_mode_v1', true);
-  }
 
-  // On mobile, lock to portrait orientation
-  if (!kIsWeb) {
-    try {
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
-    } catch (_) {
-      // Desktop platforms don't support orientation lock — ignore
-    }
-  }
-
-  // Immersive status bar styling (mobile only)
-  if (!kIsWeb) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -65,32 +27,80 @@ void main() async {
         systemNavigationBarIconBrightness: Brightness.light,
       ),
     );
-  }
 
-  runApp(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      ],
-      child: KrivaApp(firebaseAvailable: firebaseAvailable),
-    ),
-  );
+    runApp(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+        ],
+        child: const KrivaApp(),
+      ),
+    );
+  } catch (error, stackTrace) {
+    FlutterError.reportError(
+      FlutterErrorDetails(exception: error, stack: stackTrace),
+    );
+    runApp(_StartupFailure(error: error));
+  }
+}
+
+class _StartupFailure extends StatelessWidget {
+  final Object error;
+
+  const _StartupFailure({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkTheme,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.cloud_off_rounded, size: 56),
+                const SizedBox(height: 16),
+                const Text(
+                  'Unable to start KRIVA',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Firebase could not initialize. Check the browser console or Firebase project configuration, then reload.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 16),
+                SelectableText(
+                  error.toString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.redAccent),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class KrivaApp extends ConsumerWidget {
-  final bool firebaseAvailable;
-  const KrivaApp({super.key, required this.firebaseAvailable});
+  const KrivaApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
-    final useMock = ref.watch(useMockModeProvider);
     final locale = ref.watch(localeProvider);
+    final user = ref.watch(currentUserProvider);
 
     return MaterialApp.router(
       title: 'KRIVA',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.getTheme(user?.role),
       routerConfig: router,
       locale: locale,
       supportedLocales: const [Locale('en', ''), Locale('es', '')],
@@ -100,49 +110,6 @@ class KrivaApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      builder: (context, child) {
-        if (child == null) return const SizedBox.shrink();
-        // Show a banner when running in Mock Mode so it's always obvious
-        if (useMock) {
-          return Stack(
-            children: [
-              child,
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: IgnorePointer(
-                  child: SafeArea(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 4),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B).withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          '⚡ MOCK MODE — No Firebase',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-        return child;
-      },
     );
   }
 }

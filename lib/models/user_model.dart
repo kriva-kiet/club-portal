@@ -8,6 +8,16 @@ enum UserRole {
 
   String get value => name;
 
+  /// Developers share the Admin/Dev portal, while every other portal maps to
+  /// exactly one role, EXCEPT the member portal which everyone can access.
+  bool canAccessPortal(UserRole portalRole) {
+    if (portalRole == UserRole.member) return true;
+    if (portalRole == UserRole.admin) {
+      return this == UserRole.admin || this == UserRole.developer;
+    }
+    return this == portalRole;
+  }
+
   static UserRole fromString(String role) {
     return UserRole.values.firstWhere(
       (e) => e.name == role.toLowerCase(),
@@ -19,8 +29,11 @@ enum UserRole {
 class UserStreak {
   final int count;
   final DateTime? lastActiveDate;
+  /// ISO-date strings (yyyy-MM-dd) for each unique day user was active.
+  /// Used by admin analytics for "Weekly Active Members" chart.
+  final List<String> activityDays;
 
-  UserStreak({required this.count, this.lastActiveDate});
+  UserStreak({required this.count, this.lastActiveDate, this.activityDays = const []});
 
   factory UserStreak.fromMap(Map<String, dynamic> map) {
     final lastActive = map['lastActiveDate'];
@@ -29,6 +42,7 @@ class UserStreak {
       lastActiveDate: lastActive is Timestamp
           ? lastActive.toDate()
           : (lastActive is String ? DateTime.tryParse(lastActive) : null),
+      activityDays: List<String>.from(map['activityDays'] ?? []),
     );
   }
 
@@ -38,13 +52,15 @@ class UserStreak {
       'lastActiveDate': lastActiveDate != null
           ? Timestamp.fromDate(lastActiveDate!)
           : null,
+      'activityDays': activityDays,
     };
   }
 
-  UserStreak copyWith({int? count, DateTime? lastActiveDate}) {
+  UserStreak copyWith({int? count, DateTime? lastActiveDate, List<String>? activityDays}) {
     return UserStreak(
       count: count ?? this.count,
       lastActiveDate: lastActiveDate ?? this.lastActiveDate,
+      activityDays: activityDays ?? this.activityDays,
     );
   }
 }
@@ -61,6 +77,12 @@ class UserModel {
   final List<String> domainsFollowing;
   final UserStreak streak;
   final DateTime createdAt;
+  final bool isActive;
+  final String githubId;
+  final String linkedinId;
+  final String instagramId;
+  final List<String> followingIds;
+  final List<String> followerIds;
 
   UserModel({
     required this.uid,
@@ -74,6 +96,12 @@ class UserModel {
     required this.domainsFollowing,
     required this.streak,
     required this.createdAt,
+    this.isActive = true,
+    this.githubId = '',
+    this.linkedinId = '',
+    this.instagramId = '',
+    this.followingIds = const [],
+    this.followerIds = const [],
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map, String id) {
@@ -96,6 +124,12 @@ class UserModel {
           : (created is String
                 ? (DateTime.tryParse(created) ?? DateTime.now())
                 : DateTime.now()),
+      isActive: map['isActive'] ?? true,
+      githubId: map['githubId'] ?? '',
+      linkedinId: map['linkedinId'] ?? '',
+      instagramId: map['instagramId'] ?? '',
+      followingIds: List<String>.from(map['followingIds'] ?? []),
+      followerIds: List<String>.from(map['followerIds'] ?? []),
     );
   }
 
@@ -111,6 +145,12 @@ class UserModel {
       'domainsFollowing': domainsFollowing,
       'streak': streak.toMap(),
       'createdAt': Timestamp.fromDate(createdAt),
+      'isActive': isActive,
+      'githubId': githubId,
+      'linkedinId': linkedinId,
+      'instagramId': instagramId,
+      'followingIds': followingIds,
+      'followerIds': followerIds,
     };
   }
 
@@ -129,6 +169,12 @@ class UserModel {
         'lastActiveDate': streak.lastActiveDate?.toIso8601String(),
       },
       'createdAt': createdAt.toIso8601String(),
+      'isActive': isActive,
+      'githubId': githubId,
+      'linkedinId': linkedinId,
+      'instagramId': instagramId,
+      'followingIds': followingIds,
+      'followerIds': followerIds,
     };
   }
 
@@ -143,6 +189,12 @@ class UserModel {
     List<String>? domainsFollowing,
     UserStreak? streak,
     DateTime? createdAt,
+    bool? isActive,
+    String? githubId,
+    String? linkedinId,
+    String? instagramId,
+    List<String>? followingIds,
+    List<String>? followerIds,
   }) {
     return UserModel(
       uid: uid,
@@ -156,6 +208,12 @@ class UserModel {
       domainsFollowing: domainsFollowing ?? this.domainsFollowing,
       streak: streak ?? this.streak,
       createdAt: createdAt ?? this.createdAt,
+      isActive: isActive ?? this.isActive,
+      githubId: githubId ?? this.githubId,
+      linkedinId: linkedinId ?? this.linkedinId,
+      instagramId: instagramId ?? this.instagramId,
+      followingIds: followingIds ?? this.followingIds,
+      followerIds: followerIds ?? this.followerIds,
     );
   }
 }

@@ -5,25 +5,44 @@ class ChatChannelModel {
   final String name; // e.g. "#dsa", "#web_dev", "John Doe"
   final String type; // "domain" | "direct"
   final String? domainId;
+  final List<String> participants; // UID of participants
+  final String? lastMessage;
+  final DateTime? updatedAt;
 
   ChatChannelModel({
     required this.id,
     required this.name,
     required this.type,
     this.domainId,
+    this.participants = const [],
+    this.lastMessage,
+    this.updatedAt,
   });
 
   factory ChatChannelModel.fromMap(Map<String, dynamic> map, String id) {
+    final ua = map['updatedAt'];
     return ChatChannelModel(
       id: id,
       name: map['name'] ?? '',
       type: map['type'] ?? 'direct',
       domainId: map['domainId'],
+      participants: List<String>.from(map['participants'] ?? []),
+      lastMessage: map['lastMessage'],
+      updatedAt: ua is Timestamp
+          ? ua.toDate()
+          : (ua is String ? DateTime.tryParse(ua) : null),
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'name': name, 'type': type, 'domainId': domainId};
+    return {
+      'name': name,
+      'type': type,
+      'domainId': domainId,
+      'participants': participants,
+      'lastMessage': lastMessage,
+      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+    };
   }
 }
 

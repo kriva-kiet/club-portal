@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/service_providers.dart';
 import '../../widgets/glass_container.dart';
+import '../../widgets/app_avatar.dart';
 
 class LeaderboardScreen extends ConsumerWidget {
   const LeaderboardScreen({super.key});
@@ -107,14 +108,10 @@ class LeaderboardScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            CircleAvatar(
+                            AppAvatar(
+                              photoUrl: user.photoUrl,
+                              name: user.name,
                               radius: 18,
-                              backgroundImage: user.photoUrl.isNotEmpty
-                                  ? NetworkImage(user.photoUrl)
-                                  : null,
-                              child: user.photoUrl.isEmpty
-                                  ? const Icon(Icons.person)
-                                  : null,
                             ),
                           ],
                         ),
@@ -177,11 +174,8 @@ class LeaderboardScreen extends ConsumerWidget {
           children: [
             // Avatar with glowing rank outline
             Container(
-              width: avatarSize + 6,
-              height: avatarSize + 6,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: color, width: 3),
                 boxShadow: [
                   BoxShadow(
                     color: color.withValues(alpha: 0.3),
@@ -190,10 +184,12 @@ class LeaderboardScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: user.photoUrl.isNotEmpty
-                    ? Image.network(user.photoUrl, fit: BoxFit.cover)
-                    : const Icon(Icons.person, color: AppColors.textSecondary),
+              child: AppAvatar(
+                photoUrl: user.photoUrl,
+                name: user.name,
+                radius: (avatarSize + 6) / 2,
+                borderWidth: 3,
+                borderColor: color,
               ),
             ),
             // Rank Badge Number

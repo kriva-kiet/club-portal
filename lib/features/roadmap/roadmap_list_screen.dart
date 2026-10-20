@@ -198,12 +198,7 @@ class RoadmapListScreen extends ConsumerWidget {
                                           }
                                           updated.add(domain.id);
                                         }
-                                        await ref
-                                            .read(databaseRepositoryProvider)
-                                            .updateFollowedDomains(
-                                              user.uid,
-                                              updated,
-                                            );
+                                        // Removed redundant domain update - completeProfile handles this
                                         // Also update in AuthRepo cache
                                         final authRepo = ref.read(
                                           authRepositoryProvider,

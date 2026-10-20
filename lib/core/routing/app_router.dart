@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,16 +11,17 @@ import '../../features/lead/lead_scaffold.dart';
 import '../../features/admin/admin_scaffold.dart';
 import '../../features/roadmap/roadmap_detail_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
+import '../../features/web/auth/web_login_screen.dart';
+import '../../features/web/layout/web_shell.dart';
+import '../../features/authorities/authorities_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  // Watch the auth state to trigger redirect evaluations when it changes
-  final authState = ref.watch(authStateChangesProvider);
-
   return GoRouter(
     initialLocation: '/login',
-    // Listening to state changes to refresh the router
+    // Listening to state changes to refresh the router redirect without re-creating GoRouter
     refreshListenable: _RiverpodRouterRefreshListenable(ref),
     redirect: (context, state) {
+      final authState = ref.read(authStateChangesProvider);
       // Async state loading
       if (authState.isLoading) return null;
 
@@ -48,34 +50,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         return isOnOnboarding ? null : '/onboarding';
       }
 
-      // 4. Determine the correct home route for this user's role
-      final String homeRoute = _homeRouteForRole(user.role);
+      // 4. Determine the correct home route (now everyone lands on the Dashboard by default)
+      const String homeRoute = '/';
 
       // If user is on an auth/onboarding screen, send to their home
       if (isOnAuth || isOnSetup || isOnOnboarding) {
         return homeRoute;
       }
 
-      // If user is on the wrong portal for their role, redirect to correct one
-      final isMemberPortal = loc == '/' || (loc.startsWith('/') && !loc.startsWith('/lead') && !loc.startsWith('/admin') && !loc.startsWith('/roadmap'));
+      // Ensure user can access the portal they are trying to reach
       final isLeadPortal = loc.startsWith('/lead');
       final isAdminPortal = loc.startsWith('/admin');
 
-      if (!loc.startsWith('/roadmap')) {
-        if (homeRoute == '/') {
-          if (isLeadPortal || isAdminPortal) return homeRoute;
-        } else if (homeRoute == '/lead') {
-          if (isMemberPortal || isAdminPortal) return homeRoute;
-        } else if (homeRoute == '/admin') {
-          if (isMemberPortal || isLeadPortal) return homeRoute;
-        }
+      if (isLeadPortal && !user.role.canAccessPortal(UserRole.lead)) {
+        return homeRoute;
+      }
+      
+      if (isAdminPortal && !user.role.canAccessPortal(UserRole.admin)) {
+        return homeRoute;
       }
 
       return null;
     },
     routes: [
       // ── Auth / Onboarding ──────────────────────────────────────────────────
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) =>
+            kIsWeb ? const WebLoginScreen() : const LoginScreen(),
+      ),
       GoRoute(
         path: '/setup-profile',
         builder: (context, state) => const SetupProfileScreen(),
@@ -88,19 +91,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Member Portal ──────────────────────────────────────────────────────
       GoRoute(
         path: '/',
-        builder: (context, state) => const MainNavigationScaffold(),
+        builder: (context, state) =>
+            kIsWeb ? const WebShell(initialTab: 0) : const MainNavigationScaffold(),
       ),
 
       // ── Lead Portal ────────────────────────────────────────────────────────
       GoRoute(
         path: '/lead',
-        builder: (context, state) => const LeadScaffold(),
+        builder: (context, state) =>
+            kIsWeb ? const WebShell(initialTab: 5) : const LeadScaffold(),
       ),
 
       // ── Admin / Developer Portal ───────────────────────────────────────────
       GoRoute(
         path: '/admin',
-        builder: (context, state) => const AdminScaffold(),
+        builder: (context, state) =>
+            kIsWeb ? const WebShell(initialTab: 5) : const AdminScaffold(),
       ),
 
       // ── Shared Deep Links ──────────────────────────────────────────────────
@@ -110,6 +116,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final domainId = state.pathParameters['id']!;
           return RoadmapDetailScreen(domainId: domainId);
         },
+      ),
+      GoRoute(
+        path: '/authorities',
+        builder: (context, state) => const AuthoritiesScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

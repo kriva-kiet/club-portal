@@ -1,3 +1,5 @@
+import 'standalone_quiz_model.dart';
+
 class ResourceModel {
   final String title;
   final String url;
@@ -24,6 +26,7 @@ class TopicModel {
   final String title;
   final int order;
   final List<ResourceModel> resources;
+  final List<QuizQuestionModel> quizQuestions;
 
   TopicModel({
     required this.id,
@@ -31,6 +34,7 @@ class TopicModel {
     required this.title,
     required this.order,
     required this.resources,
+    this.quizQuestions = const [],
   });
 
   factory TopicModel.fromMap(
@@ -39,6 +43,7 @@ class TopicModel {
     String moduleId,
   ) {
     final resourcesList = map['resources'] as List? ?? [];
+    final quizList = map['quizQuestions'] as List? ?? [];
     return TopicModel(
       id: id,
       moduleId: moduleId,
@@ -46,6 +51,9 @@ class TopicModel {
       order: map['order'] ?? 0,
       resources: resourcesList
           .map((r) => ResourceModel.fromMap(Map<String, dynamic>.from(r)))
+          .toList(),
+      quizQuestions: quizList
+          .map((q) => QuizQuestionModel.fromMap(Map<String, dynamic>.from(q)))
           .toList(),
     );
   }
@@ -55,6 +63,7 @@ class TopicModel {
       'title': title,
       'order': order,
       'resources': resources.map((r) => r.toMap()).toList(),
+      'quizQuestions': quizQuestions.map((q) => q.toMap()).toList(),
     };
   }
 
@@ -62,6 +71,7 @@ class TopicModel {
     String? title,
     int? order,
     List<ResourceModel>? resources,
+    List<QuizQuestionModel>? quizQuestions,
   }) {
     return TopicModel(
       id: id,
@@ -69,6 +79,7 @@ class TopicModel {
       title: title ?? this.title,
       order: order ?? this.order,
       resources: resources ?? this.resources,
+      quizQuestions: quizQuestions ?? this.quizQuestions,
     );
   }
 }
@@ -79,6 +90,7 @@ class ModuleModel {
   final String title;
   final int order;
   final List<TopicModel> topics;
+  final List<ResourceModel> resources;
 
   ModuleModel({
     required this.id,
@@ -86,6 +98,7 @@ class ModuleModel {
     required this.title,
     required this.order,
     required this.topics,
+    this.resources = const [],
   });
 
   factory ModuleModel.fromMap(
@@ -94,26 +107,40 @@ class ModuleModel {
     String domainId, {
     List<TopicModel>? topics,
   }) {
+    final resourcesList = map['resources'] as List? ?? [];
     return ModuleModel(
       id: id,
       domainId: domainId,
       title: map['title'] ?? '',
       order: map['order'] ?? 0,
       topics: topics ?? [],
+      resources: resourcesList
+          .map((r) => ResourceModel.fromMap(Map<String, dynamic>.from(r)))
+          .toList(),
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'title': title, 'order': order};
+    return {
+      'title': title,
+      'order': order,
+      'resources': resources.map((resource) => resource.toMap()).toList(),
+    };
   }
 
-  ModuleModel copyWith({String? title, int? order, List<TopicModel>? topics}) {
+  ModuleModel copyWith({
+    String? title,
+    int? order,
+    List<TopicModel>? topics,
+    List<ResourceModel>? resources,
+  }) {
     return ModuleModel(
       id: id,
       domainId: domainId,
       title: title ?? this.title,
       order: order ?? this.order,
       topics: topics ?? this.topics,
+      resources: resources ?? this.resources,
     );
   }
 }
@@ -122,7 +149,7 @@ class DomainModel {
   final String id;
   final String name;
   final String description;
-  final String leadUserId;
+  final List<String> leadUserIds;
   final String password;
   final List<ModuleModel> modules;
 
@@ -130,7 +157,7 @@ class DomainModel {
     required this.id,
     required this.name,
     required this.description,
-    required this.leadUserId,
+    required this.leadUserIds,
     required this.password,
     required this.modules,
   });
@@ -144,7 +171,11 @@ class DomainModel {
       id: id,
       name: map['name'] ?? '',
       description: map['description'] ?? '',
-      leadUserId: map['leadUserId'] ?? '',
+      leadUserIds: map['leadUserIds'] != null 
+          ? List<String>.from(map['leadUserIds']) 
+          : (map['leadUserId'] != null && map['leadUserId'].toString().isNotEmpty 
+              ? [map['leadUserId'].toString()] 
+              : []),
       password: map['password'] ?? '',
       modules: modules ?? [],
     );
@@ -154,7 +185,7 @@ class DomainModel {
     return {
       'name': name,
       'description': description,
-      'leadUserId': leadUserId,
+      'leadUserIds': leadUserIds,
       'password': password,
     };
   }
@@ -162,7 +193,7 @@ class DomainModel {
   DomainModel copyWith({
     String? name,
     String? description,
-    String? leadUserId,
+    List<String>? leadUserIds,
     String? password,
     List<ModuleModel>? modules,
   }) {
@@ -170,7 +201,7 @@ class DomainModel {
       id: id,
       name: name ?? this.name,
       description: description ?? this.description,
-      leadUserId: leadUserId ?? this.leadUserId,
+      leadUserIds: leadUserIds ?? this.leadUserIds,
       password: password ?? this.password,
       modules: modules ?? this.modules,
     );

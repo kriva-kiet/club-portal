@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import '../../models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/message_model.dart';
 import '../../models/post_model.dart';
 import '../../services/service_providers.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/glass_container.dart';
+import '../../widgets/app_avatar.dart';
+import '../../widgets/linkable_text.dart';
+import '../../widgets/user_list_sheet.dart';
+import '../../widgets/app_footer.dart';
 import '../../core/localization/app_localizations.dart';
 
 class CommunityScreen extends ConsumerStatefulWidget {
@@ -42,9 +49,9 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.people_alt_rounded,
-                    color: AppColors.primary,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 28,
                   ),
                   const SizedBox(width: 12),
@@ -61,8 +68,8 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
             ),
             TabBar(
               controller: _tabController,
-              indicatorColor: AppColors.primary,
-              labelColor: AppColors.primary,
+              indicatorColor: Theme.of(context).colorScheme.primary,
+              labelColor: Theme.of(context).colorScheme.primary,
               unselectedLabelColor: AppColors.textMuted,
               labelStyle: const TextStyle(
                 fontWeight: FontWeight.bold,
@@ -70,13 +77,13 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
               ),
               tabs: const [
                 Tab(text: 'Feed'),
-                Tab(text: 'Chats'),
+                Tab(text: 'Members'),
               ],
             ),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: const [_FeedTab(), _ChatsTab()],
+                children: const [_FeedTab(), _MembersTab()],
               ),
             ),
           ],
@@ -190,6 +197,13 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                       createdAt: DateTime.now(),
                     );
                     await ref.read(databaseRepositoryProvider).createPost(post);
+                    // Trigger local notification
+                    await NotificationService.showPostNotification(
+                      title: user.name,
+                      body: post.text.length > 80
+                          ? '${post.text.substring(0, 80)}…'
+                          : post.text,
+                    );
                     if (context.mounted) Navigator.pop(context);
                   },
                   child: const Text('Post to Community'),
@@ -240,10 +254,10 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.comment_outlined,
                             size: 20,
-                            color: AppColors.primary,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -279,15 +293,10 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    CircleAvatar(
+                                    AppAvatar(
+                                      photoUrl: comment.authorPhoto,
+                                      name: comment.authorName,
                                       radius: 16,
-                                      backgroundImage:
-                                          comment.authorPhoto.isNotEmpty
-                                          ? NetworkImage(comment.authorPhoto)
-                                          : null,
-                                      child: comment.authorPhoto.isEmpty
-                                          ? const Icon(Icons.person, size: 16)
-                                          : null,
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -317,7 +326,7 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                                             ],
                                           ),
                                           const SizedBox(height: 4),
-                                          Text(
+                                          LinkableText(
                                             comment.text,
                                             style: const TextStyle(
                                               fontSize: 13,
@@ -374,14 +383,29 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                                 text: commentController.text.trim(),
                                 createdAt: DateTime.now(),
                               );
+                              final commentText = commentController.text.trim();
+                              commentController.clear();
                               await ref
                                   .read(databaseRepositoryProvider)
                                   .addComment(post.id, comment);
-                              commentController.clear();
+
+                              // Notify post author if commenter is not the author
+                              if (post.authorUid != user.uid) {
+                                final preview = commentText.length > 60
+                                    ? '${commentText.substring(0, 60)}…'
+                                    : commentText;
+                                await NotificationService.sendDirectNotification(
+                                  recipientUid: post.authorUid,
+                                  type: 'comment',
+                                  title: '${user.name} commented on your post',
+                                  body: preview,
+                                  extraData: {'postId': post.id},
+                                );
+                              }
                             },
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.send_rounded,
-                              color: AppColors.primary,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ],
@@ -397,6 +421,53 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
     );
   }
 
+  Future<void> _confirmDeletePost(BuildContext context, String postId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Delete Post'),
+        content: const Text(
+          'Are you sure you want to delete this post? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await ref.read(databaseRepositoryProvider).deletePost(postId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Post deleted successfully! 🗑️'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete post: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final postsAsync = ref.watch(postsProvider(_selectedTag));
@@ -407,7 +478,7 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showNewPostSheet(context, user),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add_comment_rounded, color: Colors.white),
       ),
       body: Column(
@@ -437,10 +508,10 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                     onSelected: (val) {
                       if (val) setState(() => _selectedTag = tag['id']!);
                     },
-                    selectedColor: AppColors.primary,
+                    selectedColor: Theme.of(context).colorScheme.primary,
                     backgroundColor: AppColors.surfaceLight,
                     side: BorderSide(
-                      color: isSelected ? AppColors.primary : AppColors.border,
+                      color: isSelected ? Theme.of(context).colorScheme.primary : AppColors.border,
                     ),
                   ),
                 );
@@ -459,15 +530,36 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                   );
                 }
 
+                // Sort posts: priority to following members, then descending by date
+                final sortedPosts = List<PostModel>.from(posts);
+                sortedPosts.sort((a, b) {
+                  final aFollowed = user.followingIds.contains(a.authorUid);
+                  final bFollowed = user.followingIds.contains(b.authorUid);
+                  
+                  if (aFollowed && !bFollowed) return -1;
+                  if (!aFollowed && bFollowed) return 1;
+                  return b.createdAt.compareTo(a.createdAt); // both followed or both unfollowed, newest first
+                });
+
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 4,
                   ),
-                  itemCount: posts.length,
+                  itemCount: sortedPosts.length + 1,
                   itemBuilder: (context, index) {
-                    final post = posts[index];
+                    if (index == sortedPosts.length) {
+                      return const Padding(
+                        padding: EdgeInsets.only(top: 8, bottom: 32),
+                        child: AppFooter(),
+                      );
+                    }
+                    final post = sortedPosts[index];
                     final hasLiked = post.likes.contains(user.uid);
+
+                    final canDelete = post.authorUid == user.uid ||
+                        user.role == UserRole.admin ||
+                        user.role == UserRole.developer;
 
                     return GlassContainer(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -477,14 +569,10 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                         children: [
                           Row(
                             children: [
-                              CircleAvatar(
+                              AppAvatar(
+                                photoUrl: post.authorPhoto,
+                                name: post.authorName,
                                 radius: 18,
-                                backgroundImage: post.authorPhoto.isNotEmpty
-                                    ? NetworkImage(post.authorPhoto)
-                                    : null,
-                                child: post.authorPhoto.isEmpty
-                                    ? const Icon(Icons.person)
-                                    : null,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -516,29 +604,42 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(
+                                  color: Theme.of(context).colorScheme.primary.withValues(
                                     alpha: 0.1,
                                   ),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: AppColors.primary.withValues(
+                                    color: Theme.of(context).colorScheme.primary.withValues(
                                       alpha: 0.2,
                                     ),
                                   ),
                                 ),
                                 child: Text(
                                   '#${post.tag}',
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.primary,
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
+                              if (canDelete) ...[
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline_rounded,
+                                    color: AppColors.error,
+                                    size: 20,
+                                  ),
+                                  tooltip: 'Delete post',
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () => _confirmDeletePost(context, post.id),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Text(
+                          LinkableText(
                             post.text,
                             style: const TextStyle(
                               fontSize: 14,
@@ -551,10 +652,24 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                             children: [
                               // Like Button
                               IconButton(
-                                onPressed: () {
-                                  ref
+                                onPressed: () async {
+                                  final willLike = !hasLiked;
+                                  await ref
                                       .read(databaseRepositoryProvider)
                                       .toggleLikePost(user.uid, post.id);
+
+                                  if (willLike && post.authorUid != user.uid) {
+                                    final preview = post.text.length > 50
+                                        ? '${post.text.substring(0, 50)}…'
+                                        : post.text;
+                                    await NotificationService.sendDirectNotification(
+                                      recipientUid: post.authorUid,
+                                      type: 'like',
+                                      title: '${user.name} liked your post',
+                                      body: preview.isEmpty ? 'Your post received a new like!' : preview,
+                                      extraData: {'postId': post.id},
+                                    );
+                                  }
                                 },
                                 icon: Icon(
                                   hasLiked
@@ -628,6 +743,7 @@ class _ChatsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final channelsAsync = ref.watch(channelsProvider);
+    final membersAsync = ref.watch(_communityMembersProvider);
     final user = ref.watch(currentUserProvider);
 
     if (user == null) return const Center(child: CircularProgressIndicator());
@@ -648,33 +764,70 @@ class _ChatsTab extends ConsumerWidget {
           itemCount: channels.length,
           itemBuilder: (context, index) {
             final channel = channels[index];
-            final icon = channel.type == 'domain'
-                ? Icons.tag_rounded
-                : Icons.campaign_rounded;
-            final subtitle = channel.type == 'domain'
-                ? 'Domain Discussion'
-                : 'General Channel';
+            
+            String displayTitle = channel.name;
+            String subtitle = '';
+            IconData icon = Icons.forum_rounded;
+            String? photoUrl;
+
+            if (channel.type == 'direct') {
+              icon = Icons.person_rounded;
+              subtitle = channel.lastMessage ?? 'Started a chat';
+              
+              // Resolve other participant
+              final otherUserId = channel.participants.firstWhere(
+                (id) => id != user.uid,
+                orElse: () => '',
+              );
+              
+              if (otherUserId.isNotEmpty) {
+                membersAsync.whenData((members) {
+                  final otherUser = members.firstWhere(
+                    (m) => m.uid == otherUserId,
+                    orElse: () => user, // fallback (shouldn't happen)
+                  );
+                  if (otherUser.uid == otherUserId) {
+                    displayTitle = otherUser.name;
+                    photoUrl = otherUser.photoUrl;
+                  }
+                });
+              }
+            } else if (channel.type == 'domain') {
+              icon = Icons.tag_rounded;
+              subtitle = 'Domain Discussion';
+            } else {
+              icon = Icons.campaign_rounded;
+              subtitle = 'General Channel';
+            }
+
+            final displayChannel = channel.type == 'direct' ? ChatChannelModel(
+              id: channel.id,
+              name: displayTitle,
+              type: channel.type,
+              participants: channel.participants,
+              lastMessage: channel.lastMessage,
+              updatedAt: channel.updatedAt,
+              domainId: channel.domainId,
+            ) : channel;
 
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: AppColors.primary, size: 20),
+                leading: AppAvatar(
+                  photoUrl: photoUrl,
+                  name: displayTitle,
+                  radius: 20,
                 ),
                 title: Text(
-                  channel.name,
+                  displayTitle,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
                   subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     color: AppColors.textMuted,
                   ),
                 ),
@@ -683,7 +836,7 @@ class _ChatsTab extends ConsumerWidget {
                   size: 16,
                   color: AppColors.textMuted,
                 ),
-                onTap: () => _openChatRoom(context, channel, user),
+                onTap: () => _openChatRoom(context, displayChannel, user),
               ),
             );
           },
@@ -776,14 +929,10 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (!isMe) ...[
-                            CircleAvatar(
-                              radius: 16,
-                              backgroundImage: msg.senderPhoto.isNotEmpty
-                                  ? NetworkImage(msg.senderPhoto)
-                                  : null,
-                              child: msg.senderPhoto.isEmpty
-                                  ? const Icon(Icons.person, size: 16)
-                                  : null,
+                            AppAvatar(
+                              photoUrl: msg.senderPhoto,
+                              name: msg.senderName,
+                              radius: 14,
                             ),
                             const SizedBox(width: 8),
                           ],
@@ -795,7 +944,7 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: isMe
-                                    ? AppColors.primary
+                                    ? Theme.of(context).colorScheme.primary
                                     : AppColors.surfaceLight,
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(16),
@@ -825,7 +974,7 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                                       ),
                                     ),
                                   if (!isMe) const SizedBox(height: 2),
-                                  Text(
+                                  LinkableText(
                                     msg.text,
                                     style: TextStyle(
                                       color: isMe
@@ -833,6 +982,13 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                                           : AppColors.textPrimary,
                                       fontSize: 13,
                                       height: 1.3,
+                                    ),
+                                    linkStyle: TextStyle(
+                                      color: isMe
+                                          ? Colors.yellowAccent
+                                          : Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                      decoration: TextDecoration.underline,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -889,9 +1045,9 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: _sendChatMessage,
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.send_rounded,
-                    color: AppColors.primary,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],
@@ -920,3 +1076,447 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
     _msgController.clear();
   }
 }
+
+// ── Members Tab ───────────────────────────────────────────────────────────
+final _communityMembersProvider = StreamProvider<List<UserModel>>((ref) {
+  final db = ref.watch(databaseRepositoryProvider);
+  return db.getMembers();
+});
+
+class _MembersTab extends ConsumerStatefulWidget {
+  const _MembersTab();
+
+  @override
+  ConsumerState<_MembersTab> createState() => _MembersTabState();
+}
+
+class _MembersTabState extends ConsumerState<_MembersTab> {
+  final _searchController = TextEditingController();
+  final Set<String> _optimisticFollows = {};
+  final Set<String> _optimisticUnfollows = {};
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _launchExternalUrl(String url) async {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return;
+    String finalUrl = trimmed;
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = 'https://$finalUrl';
+    }
+    try {
+      final uri = Uri.parse(finalUrl);
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        final fallback = await launchUrl(uri, mode: LaunchMode.platformDefault);
+        if (!fallback && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open $finalUrl')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open $finalUrl')),
+        );
+      }
+    }
+  }
+
+  Widget _buildSocialButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required Color backgroundColor,
+    required String url,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _launchExternalUrl(url),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: backgroundColor.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: backgroundColor.withValues(alpha: 0.5),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 13, color: color),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Icon(
+                Icons.arrow_outward_rounded,
+                size: 11,
+                color: color.withValues(alpha: 0.7),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final membersAsync = ref.watch(_communityMembersProvider);
+    final currentUser = ref.watch(currentUserProvider);
+
+    return membersAsync.when(
+      data: (allMembers) {
+        if (allMembers.isEmpty) {
+          return const Center(
+            child: Text(
+              'No members found.',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+          );
+        }
+
+        final query = _searchController.text.trim().toLowerCase();
+        
+        // Filter by search query
+        var filteredMembers = allMembers.where((u) {
+          return u.name.toLowerCase().contains(query) ||
+                 u.role.name.toLowerCase().contains(query) ||
+                 u.batch.toLowerCase().contains(query);
+        }).toList();
+
+        // Sort alphabetically by name
+        filteredMembers.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Search members...',
+                  hintStyle: const TextStyle(color: AppColors.textMuted),
+                  prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: filteredMembers.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No matching members.',
+                        style: TextStyle(color: AppColors.textMuted),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      itemCount: filteredMembers.length,
+                      itemBuilder: (context, index) {
+                        final user = filteredMembers[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: GlassContainer(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    AppAvatar(
+                                      photoUrl: user.photoUrl,
+                                      name: user.name,
+                                      radius: 24,
+                                      borderWidth: 1.5,
+                                      borderColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            user.name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${user.role.name.toUpperCase()} • ${user.batch}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: AppColors.textMuted,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (currentUser != null && currentUser.uid != user.uid) ...[
+                                      // Message Button (only if followed)
+                                      if (currentUser.followingIds.contains(user.uid))
+                                        IconButton(
+                                          icon: const Icon(Icons.message_rounded, color: AppColors.primary),
+                                          onPressed: () async {
+                                            final channelId = await ref.read(databaseRepositoryProvider)
+                                                .getOrCreateDirectChat(currentUser.uid, user.uid);
+                                            
+                                            if (context.mounted) {
+                                              final dummyChannel = ChatChannelModel(
+                                                id: channelId,
+                                                name: user.name,
+                                                type: 'direct',
+                                                participants: [currentUser.uid, user.uid],
+                                              );
+                                              
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => _ChatRoomScreen(
+                                                    channel: dummyChannel,
+                                                    currentUser: currentUser,
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      // Follow/Unfollow Button
+                                      Builder(
+                                        builder: (context) {
+                                          bool isFollowing = currentUser.followingIds.contains(user.uid);
+                                          if (_optimisticFollows.contains(user.uid)) isFollowing = true;
+                                          if (_optimisticUnfollows.contains(user.uid)) isFollowing = false;
+
+                                          return TextButton(
+                                            onPressed: () async {
+                                              setState(() {
+                                                if (isFollowing) {
+                                                  _optimisticFollows.remove(user.uid);
+                                                  _optimisticUnfollows.add(user.uid);
+                                                } else {
+                                                  _optimisticFollows.add(user.uid);
+                                                  _optimisticUnfollows.remove(user.uid);
+                                                }
+                                              });
+                                              await ref.read(databaseRepositoryProvider)
+                                                  .toggleFollowMember(currentUser.uid, user.uid, !isFollowing);
+                                            },
+                                            style: TextButton.styleFrom(
+                                              backgroundColor: isFollowing 
+                                                  ? AppColors.surfaceLight 
+                                                  : AppColors.primary,
+                                              foregroundColor: isFollowing
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                            ),
+                                            child: Text(
+                                              isFollowing ? 'Following' : 'Follow',
+                                              style: const TextStyle(fontWeight: FontWeight.bold),
+                                            ),
+                                          );
+                                        }
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                // Followers & Following Stats Row
+                                Row(
+                                  children: [
+                                    InkWell(
+                                      onTap: () {
+                                        UserListSheet.show(
+                                          context,
+                                          title: '${user.name}\'s Followers',
+                                          userIds: user.followerIds,
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.people_outline_rounded,
+                                              size: 14,
+                                              color: Theme.of(context).colorScheme.primary,
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              '${user.followerIds.length}',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: Theme.of(context).colorScheme.primary,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Text(
+                                              'Followers',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    InkWell(
+                                      onTap: () {
+                                        UserListSheet.show(
+                                          context,
+                                          title: '${user.name} is Following',
+                                          userIds: user.followingIds,
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surfaceLight,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: AppColors.border,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.person_add_alt_1_outlined,
+                                              size: 14,
+                                              color: AppColors.textMuted,
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              '${user.followingIds.length}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Text(
+                                              'Following',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (user.bio.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    user.bio,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ],
+                                if (user.githubId.isNotEmpty || user.linkedinId.isNotEmpty || user.instagramId.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  const Divider(color: AppColors.border),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      if (user.githubId.isNotEmpty)
+                                        _buildSocialButton(
+                                          label: 'GitHub',
+                                          icon: Icons.code_rounded,
+                                          color: Colors.white,
+                                          backgroundColor: const Color(0xFF24292E),
+                                          url: user.githubId.startsWith('http')
+                                              ? user.githubId
+                                              : 'https://github.com/${user.githubId.replaceAll('@', '')}',
+                                        ),
+                                      if (user.linkedinId.isNotEmpty)
+                                        _buildSocialButton(
+                                          label: 'LinkedIn',
+                                          icon: Icons.business_center_rounded,
+                                          color: const Color(0xFF70B5F9),
+                                          backgroundColor: const Color(0xFF0A66C2),
+                                          url: user.linkedinId.startsWith('http')
+                                              ? user.linkedinId
+                                              : 'https://www.linkedin.com/in/${user.linkedinId.replaceAll('@', '')}',
+                                        ),
+                                      if (user.instagramId.isNotEmpty)
+                                        _buildSocialButton(
+                                          label: 'Instagram',
+                                          icon: Icons.camera_alt_rounded,
+                                          color: const Color(0xFFFF85A2),
+                                          backgroundColor: const Color(0xFFE1306C),
+                                          url: user.instagramId.startsWith('http')
+                                              ? user.instagramId
+                                              : 'https://instagram.com/${user.instagramId.replaceAll('@', '')}',
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Text(
+          'Error loading members: $error',
+          style: const TextStyle(color: Colors.redAccent),
+        ),
+      ),
+    );
+  }
+}
+

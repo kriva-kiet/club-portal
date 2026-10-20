@@ -106,7 +106,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               ),
             ),
           ),
@@ -129,7 +129,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: AppColors.primary,
+                                color: Theme.of(context).colorScheme.primary,
                                 width: 2,
                               ),
                               color: AppColors.surface,
@@ -152,9 +152,9 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                             right: 0,
                             child: Container(
                               padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: AppColors.primary,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               child: const Icon(
                                 Icons.refresh_rounded,
@@ -265,13 +265,13 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                             return FilterChip(
                               label: Text(domain.name),
                               selected: isSelected,
-                              selectedColor: AppColors.primary.withValues(
+                              selectedColor: Theme.of(context).colorScheme.primary.withValues(
                                 alpha: 0.2,
                               ),
-                              checkmarkColor: AppColors.primary,
+                              checkmarkColor: Theme.of(context).colorScheme.primary,
                               labelStyle: TextStyle(
                                 color: isSelected
-                                    ? AppColors.primary
+                                    ? Theme.of(context).colorScheme.primary
                                     : AppColors.textSecondary,
                                 fontWeight: isSelected
                                     ? FontWeight.bold
@@ -282,7 +282,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                                 borderRadius: BorderRadius.circular(20),
                                 side: BorderSide(
                                   color: isSelected
-                                      ? AppColors.primary
+                                      ? Theme.of(context).colorScheme.primary
                                       : AppColors.border,
                                   width: 1,
                                 ),

@@ -8,7 +8,11 @@ abstract class AuthRepository {
   UserModel? get currentUser;
 
   /// Signs in using either a Club ID (which internally maps to clubid@kriva.app) or an email address.
-  Future<UserModel> signIn(String loginId, String password);
+  Future<UserModel> signIn(
+    String loginId,
+    String password, {
+    UserRole? expectedRole,
+  });
 
   /// Signs in using Google Sign-In.
   Future<UserModel> signInWithGoogle();
@@ -18,6 +22,12 @@ abstract class AuthRepository {
 
   /// Updates the password (useful for first-time login temp password updates).
   Future<void> updatePassword(String newPassword);
+
+  /// Re-authenticates the signed-in administrator before a destructive action.
+  Future<void> verifyCurrentPassword(String password);
+
+  /// Updates the cached and Firebase profile photo for immediate UI refresh.
+  Future<void> updateProfilePhoto(String photoUrl);
 
   /// Completes profile setup on first-time login.
   Future<UserModel> completeProfile({

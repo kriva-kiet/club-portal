@@ -1,0 +1,147 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ── Helper Functions ──────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (getUserData().role == 'admin' || getUserData().role == 'developer');
+    }
+
+    function isLead() {
+      return isSignedIn() && (getUserData().role == 'lead' || isAdmin());
+    }
+
+    // ── Admission / Access Requests ──────────────────────────────────────────
+    match /access_requests/{requestId} {
+      allow create: if true; // Public applications allowed
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ── User Profiles ────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Dedicated Private Passwords Collection ────────────────────────────────
+    match /user_passwords/{userId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Domains & Learning Roadmaps ──────────────────────────────────────────
+    match /domains/{domainId} {
+      allow read: if isSignedIn();
+      allow write: if isLead();
+
+      match /modules/{moduleId} {
+        allow read: if isSignedIn();
+        allow write: if isLead();
+
+        match /topics/{topicId} {
+          allow read: if isSignedIn();
+          allow write: if isLead();
+        }
+      }
+    }
+
+    // ── User Progress ────────────────────────────────────────────────────────
+    match /userProgress/{progressId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── Broadcasts & Announcements ───────────────────────────────────────────
+    match /broadcasts/{broadcastId} {
+      allow read: if isSignedIn();
+      allow write: if isLead();
+    }
+
+    // ── Sessions & Attendance ────────────────────────────────────────────────
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn();
+      allow write: if isLead();
+    }
+
+    // ── Hackathons & Team Requests ───────────────────────────────────────────
+    match /hackathons/{hackathonId} {
+      allow read: if isSignedIn();
+      allow write: if isLead();
+    }
+
+    match /team_requests/{requestId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── Posts & Comments (Community Feed) ────────────────────────────────────
+    match /posts/{postId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── Channels & Messages (Chat) ───────────────────────────────────────────
+    match /channels/{channelId} {
+      allow read, write: if isSignedIn();
+
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // ── Quizzes & Assessments ────────────────────────────────────────────────
+    match /standalone_quizzes/{quizId} {
+      allow read: if isSignedIn();
+      allow write: if isLead();
+    }
+
+    match /quiz_results/{resultId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── Profile Update Requests ──────────────────────────────────────────────
+    match /profile_update_requests/{requestId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ── In-App Notifications ─────────────────────────────────────────────────
+    match /user_notifications/{notificationId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── Complaints / Grievance Box ───────────────────────────────────────────
+    match /complaints/{complaintId} {
+      allow create: if true; // Anonymous complaints allowed
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ── Authorities Directory ────────────────────────────────────────────────
+    match /authorities/{authorityId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /authority_groups/{groupId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── Past Members ─────────────────────────────────────────────────────────
+    match /past_members/{memberId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
